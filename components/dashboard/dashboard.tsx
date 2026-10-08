@@ -18,6 +18,7 @@ import { ReportsTab } from "@/components/dashboard/reports-tab";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TransactionForm } from "@/components/dashboard/transaction-form";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
+import { TransactionTypeFilter } from "@/components/dashboard/transaction-type-filter";
 import {
   Card,
   CardContent,
@@ -34,6 +35,7 @@ import {
   monthRange,
   pluralEntries,
   type Category,
+  type CategoryType,
   type Transaction,
 } from "@/lib/budget";
 import { fetchDashboardData, type DashboardData } from "@/lib/queries";
@@ -65,6 +67,11 @@ export function Dashboard({ session }: { session: Session }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
 
+  // Filtr „Uznania / Obciążenia” w Historii. `null` = pokaż wszystko.
+  const [historyFilter, setHistoryFilter] = useState<CategoryType | null>(
+    null
+  );
+
   // Numer ostatniego żądania: spóźniona odpowiedź dla poprzedniego miesiąca
   // (albo sprzed zapisu) nie nadpisze nowszych danych.
   const requestSeq = useRef(0);
@@ -94,7 +101,10 @@ export function Dashboard({ session }: { session: Session }) {
     });
   }, [userId, year, month, apply]);
 
-  // Po zapisie: odśwież i uprzedź, gdy wpis trafił poza wyświetlany miesiąc.
+  // Po zapisie: odśwież widok. Filtr miesiąca służy wyłącznie do wyświetlania –
+  // zapis z dowolną datą jest zawsze dozwolony, a filtr zostaje bez zmian. Gdy
+  // wpis wypada poza oglądany miesiąc, potwierdzamy zapis i wyjaśniamy, czemu
+  // nie widać go na liście.
   const afterSave = useCallback(
     async (date?: string) => {
       await refresh();
@@ -102,13 +112,11 @@ export function Dashboard({ session }: { session: Session }) {
       const day = date.slice(0, 10);
       const { start, next } = monthRange(year, month);
       if (day < start || day >= next) {
-        toast.info(
-          `Wpis z datą ${formatDate(day)} jest poza wybranym miesiącem`,
-          {
-            description: "Zmień miesiąc u góry, aby go zobaczyć.",
-            duration: 6000,
-          }
-        );
+        toast.success(`Zapisano wpis z datą ${formatDate(day)}`, {
+          description:
+            "Nie ma go na liście, bo przeglądasz inny miesiąc.",
+          duration: 6000,
+        });
       }
     },
     [refresh, year, month]
@@ -145,6 +153,15 @@ export function Dashboard({ session }: { session: Session }) {
     () => computeTotals(monthTransactions, categoryById),
     [monthTransactions, categoryById]
   );
+
+  // Historia: „Uznania” pokazują tylko przychody, „Obciążenia” tylko wydatki,
+  // brak wyboru pokazuje wszystko wymieszane (tak jak dotąd).
+  const historyTransactions = useMemo(() => {
+    if (!historyFilter) return monthTransactions;
+    return monthTransactions.filter(
+      (t) => categoryById.get(String(t.category_id))?.type === historyFilter
+    );
+  }, [monthTransactions, categoryById, historyFilter]);
 
   return (
     <main className="min-h-svh bg-linear-to-b from-blue-50 to-background dark:from-blue-950/30">
@@ -236,15 +253,19 @@ export function Dashboard({ session }: { session: Session }) {
                 </CardTitle>
                 <CardDescription>
                   {monthLabel}
-                  {!loading &&
-                    ` · ${monthTransactions.length} ${pluralEntries(
-                      monthTransactions.length
-                    )}`}
+                  {!loading && historyFilter
+                    ? ` · ${historyTransactions.length} z ${monthTransactions.length} ${pluralEntries(monthTransactions.length)}`
+                    : !loading &&
+                      ` · ${monthTransactions.length} ${pluralEntries(monthTransactions.length)}`}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-4">
+                <TransactionTypeFilter
+                  value={historyFilter}
+                  onChange={setHistoryFilter}
+                />
                 <TransactionsTable
-                  transactions={monthTransactions}
+                  transactions={historyTransactions}
                   categoryById={categoryById}
                   loading={loading}
                   onEdit={openEdit}
@@ -256,9 +277,11 @@ export function Dashboard({ session }: { session: Session }) {
 
           <TabsContent value="raporty">
             <ReportsTab
+              userId={userId}
               categories={categories}
               transactions={monthTransactions}
               monthLabel={monthLabel}
+              currentYear={year}
               loading={loading}
             />
           </TabsContent>

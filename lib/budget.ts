@@ -3,8 +3,10 @@
 //
 // Schemat bazy używany przez aplikację (SQL: supabase/schema.sql):
 //   categories(id, user_id, name, type)
-//   transactions(id, user_id, amount, date, description, category_id)
+//   transactions(id, user_id, amount, date, description, category_id, created_at)
 // `amount` zawsze jest dodatnie; czy to wydatek, czy przychód, wynika z `categories.type`.
+// `created_at` musi być ustawiane automatycznie przez bazę (default now()) – aplikacja
+// używa go jako drugiego kryterium sortowania przy równych datach.
 
 export type Id = string | number;
 export type CategoryType = "wydatek" | "przychod";
@@ -24,6 +26,8 @@ export interface Transaction {
   date: string;
   description: string | null;
   category_id: Id | null;
+  /** Znacznik czasu zapisu wiersza – drugie kryterium sortowania po `date`. */
+  created_at: string;
 }
 
 export const TYPE_LABEL: Record<CategoryType, string> = {
@@ -55,6 +59,14 @@ export function monthRange(year: number, month: number) {
   return {
     start: dateKey(new Date(year, month, 1)),
     next: dateKey(new Date(year, month + 1, 1)),
+  };
+}
+
+// Zakres całego roku, na tej samej zasadzie co `monthRange`.
+export function yearRange(year: number) {
+  return {
+    start: dateKey(new Date(year, 0, 1)),
+    next: dateKey(new Date(year + 1, 0, 1)),
   };
 }
 

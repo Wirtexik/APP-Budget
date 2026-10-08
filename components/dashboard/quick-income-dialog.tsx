@@ -29,6 +29,9 @@ export function QuickIncomeDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  // Własna data tego okna – niezależna od formularza wydatków i od filtra
+  // miesiąca u góry strony (ten służy tylko do filtrowania widoku).
+  const [date, setDate] = useState(() => dateKey(new Date()));
   const [categoryValue, setCategoryValue] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function QuickIncomeDialog({
 
   function reset() {
     setAmount("");
+    setDate(dateKey(new Date()));
     setCategoryValue(null);
     setDescription("");
     setError(null);
@@ -57,6 +61,11 @@ export function QuickIncomeDialog({
       return;
     }
 
+    if (!date) {
+      setError("Podaj datę.");
+      return;
+    }
+
     if (!categoryValue) {
       setError("Wybierz kategorię.");
       return;
@@ -64,7 +73,6 @@ export function QuickIncomeDialog({
 
     setSaving(true);
 
-    const date = dateKey(new Date());
     const category = await resolveCategory(userId, categories, categoryValue);
     const failure =
       category.error ??
@@ -94,7 +102,10 @@ export function QuickIncomeDialog({
         aria-label="Szybko dodaj przychód"
         title="Szybko dodaj przychód"
         className="rounded-full border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setDate(dateKey(new Date()));
+          setOpen(true);
+        }}
       >
         <Plus />
       </Button>
@@ -108,24 +119,37 @@ export function QuickIncomeDialog({
                 Szybki przychód
               </DialogTitle>
               <DialogDescription>
-                Wpis dostanie dzisiejszą datę.
+                Domyślnie dzisiejsza data – możesz wybrać dowolną.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="quick-amount">Kwota (zł)</Label>
-              <Input
-                id="quick-amount"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0.01"
-                autoFocus
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={saving}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="quick-amount">Kwota (zł)</Label>
+                <Input
+                  id="quick-amount"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  autoFocus
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={saving}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="quick-date">Data</Label>
+                <Input
+                  id="quick-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  disabled={saving}
+                  required
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">

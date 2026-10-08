@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { FolderPlus, Trash2 } from "lucide-react";
+import { FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditCategoryDialog } from "@/components/dashboard/edit-category-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,7 +47,18 @@ export function CategoryForm({
   const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<Id | null>(null);
 
+  // `editKey` wymusza świeży stan formularza przy każdym otwarciu edycji.
+  const [editingCategory, setEditingCategory] = useState<Category | null>(
+    null
+  );
+  const [editKey, setEditKey] = useState(0);
+
   const own = useMemo(() => ownCategories(categories), [categories]);
+
+  function openEdit(category: Category) {
+    setEditingCategory(category);
+    setEditKey((k) => k + 1);
+  }
 
   async function handleRemove(category: Category) {
     setRemovingId(category.id);
@@ -135,7 +147,7 @@ export function CategoryForm({
           <FolderPlus className="size-4 text-muted-foreground" />
           Nowa kategoria
         </CardTitle>
-        <CardDescription>Pogrupuj swoje wydatki i przychody.</CardDescription>
+        <CardDescription>Pogrupuj swoje przychody i wydatki.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -189,7 +201,7 @@ export function CategoryForm({
               Nie masz jeszcze własnych kategorii.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y">
+            <ul className="flex max-h-32 flex-col divide-y overflow-y-auto">
               {own.map((c) => (
                 <li
                   key={c.id}
@@ -207,23 +219,44 @@ export function CategoryForm({
                       {TYPE_LABEL[c.type]}
                     </span>
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Usuń kategorię ${c.name}`}
-                    title="Usuń kategorię"
-                    className="text-muted-foreground hover:text-destructive"
-                    disabled={removingId !== null}
-                    onClick={() => handleRemove(c)}
-                  >
-                    <Trash2 />
-                  </Button>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edytuj kategorię ${c.name}`}
+                      title="Edytuj kategorię"
+                      className="text-muted-foreground hover:text-foreground"
+                      disabled={removingId !== null}
+                      onClick={() => openEdit(c)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Usuń kategorię ${c.name}`}
+                      title="Usuń kategorię"
+                      className="text-muted-foreground hover:text-destructive"
+                      disabled={removingId !== null}
+                      onClick={() => handleRemove(c)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </div>
       </CardContent>
+
+      <EditCategoryDialog
+        key={editKey}
+        category={editingCategory}
+        userId={userId}
+        onClose={() => setEditingCategory(null)}
+        onSaved={onSaved}
+      />
     </Card>
   );
 }

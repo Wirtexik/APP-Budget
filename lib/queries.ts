@@ -3,8 +3,10 @@
 // i usuwanie kategorii, usuwanie transakcji) są w swoich komponentach.
 import {
   monthRange,
+  yearRange,
   type Category,
   type CategoryRef,
+  type CategoryType,
   type Id,
   type Transaction,
 } from "@/lib/budget";
@@ -70,6 +72,29 @@ export async function insertTransaction(
   return error?.message ?? null;
 }
 
+export async function updateCategory(
+  userId: string,
+  id: Id,
+  fields: { name: string; type: CategoryType }
+) {
+  const trimmed = fields.name.trim();
+  if (!trimmed) return "Podaj nazwę kategorii.";
+
+  const { data, error } = await getSupabase()
+    .from("categories")
+    .update({ name: trimmed, type: fields.type })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("id");
+
+  if (error) return error.message;
+  // Przy braku uprawnień (RLS) Supabase nie zgłasza błędu, tylko aktualizuje 0 wierszy.
+  if (!data?.length) {
+    return "Nie zapisano zmian – kategoria nie istnieje albo brak uprawnień do edycji.";
+  }
+  return null;
+}
+
 export async function updateTransaction(
   userId: string,
   id: Id,
@@ -124,11 +149,14 @@ export async function fetchDashboardData(
       .order("name"),
     supabase
       .from("transactions")
-      .select("id, amount, date, description, category_id")
+      .select("id, amount, date, description, category_id, created_at")
       .eq("user_id", userId)
       .gte("date", start)
       .lt("date", next)
+      // Najpierw najnowsza data, a w obrębie tego samego dnia – najświeżej zapisany
+      // wpis; `id` na końcu tylko dopina pełną stabilność sortowania.
       .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
       .order("id", { ascending: false }),
   ]);
 
@@ -136,5 +164,31 @@ export async function fetchDashboardData(
     error: (cats.error ?? monthly.error)?.message ?? null,
     categories: (cats.data ?? []) as Category[],
     monthTransactions: (monthly.data ?? []) as Transaction[],
+  };
+}
+
+export interface YearlyData {
+  error: string | null;
+  transactions: Transaction[];
+}
+
+// Wszystkie transakcje wybranego roku – dane dla podsumowania rocznego w Raportach.
+export async function fetchYearlyTransactions(
+  userId: string,
+  year: number
+): Promise<YearlyData> {
+  const { start, next } = yearRange(year);
+
+  const { data, error } = await getSupabase()
+    .from("transactions")
+    .select("id, amount, date, description, category_id, created_at")
+    .eq("user_id", userId)
+    .gte("date", start)
+    .lt("date", next)
+    .order("date", { ascending: false });
+
+  return {
+    error: error?.message ?? null,
+    transactions: (data ?? []) as Transaction[],
   };
 }

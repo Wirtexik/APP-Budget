@@ -3,7 +3,9 @@
 --
 -- Aplikacja zakłada dokładnie takie nazwy tabel i kolumn:
 --   categories(id, user_id, name, type)
---   transactions(id, user_id, amount, date, description, category_id)
+--   transactions(id, user_id, amount, date, description, category_id, created_at)
+-- `created_at` (ustawiane automatycznie przez `default now()`) jest wymagane –
+-- aplikacja sortuje po nim wpisy z tego samego dnia.
 
 create table if not exists public.categories (
   id         bigint generated always as identity primary key,

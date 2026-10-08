@@ -47,7 +47,7 @@ export function SummaryCards({
     {
       key: "balance",
       title: "Saldo",
-      description: `Przychody − wydatki · ${monthLabel}`,
+      description: monthLabel,
       value: totals.balance,
       Icon: Wallet,
       card: "from-sky-500/25 via-blue-500/10 to-transparent ring-blue-500/25",

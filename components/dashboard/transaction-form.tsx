@@ -22,6 +22,8 @@ export function TransactionForm({
   onSaved: (date?: string) => Promise<void>;
 }) {
   const [amount, setAmount] = useState("");
+  // Własna data tego formularza – niezależna od okna przychodu i od filtra
+  // miesiąca u góry strony (ten służy tylko do filtrowania widoku).
   const [date, setDate] = useState(() => dateKey(new Date()));
   const [description, setDescription] = useState("");
   const [categoryValue, setCategoryValue] = useState<string | null>(null);
@@ -35,6 +37,11 @@ export function TransactionForm({
     const value = parseAmount(amount);
     if (value === null) {
       setError("Podaj kwotę większą od zera.");
+      return;
+    }
+
+    if (!date) {
+      setError("Podaj datę.");
       return;
     }
 
@@ -62,7 +69,10 @@ export function TransactionForm({
 
     await onSaved(date);
     setSaving(false);
+    // Po zapisie cały formularz wraca do stanu początkowego (data na dziś).
     setAmount("");
+    setDate(dateKey(new Date()));
+    setCategoryValue(null);
     setDescription("");
   }
 

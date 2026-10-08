@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { Label, Pie, PieChart } from "recharts";
-import { ChartPie, ListTree, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Calendar,
+  CalendarRange,
+  ChartPie,
+  ListTree,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 
+import { BudgetGauge } from "@/components/dashboard/budget-gauge";
 import {
   Accordion,
   AccordionContent,
@@ -17,12 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   currency,
   formatDate,
@@ -30,6 +32,7 @@ import {
   type CategoryType,
   type Transaction,
 } from "@/lib/budget";
+import { fetchYearlyTransactions } from "@/lib/queries";
 
 const EXPENSE_COLORS = [
   "#f97316",
@@ -53,8 +56,6 @@ const INCOME_COLORS = [
   "#06b6d4",
   "#0ea5e9",
 ];
-
-const CHART_CONFIG = { value: { label: "Kwota" } } satisfies ChartConfig;
 
 interface CategoryGroup {
   category: Category;
@@ -127,141 +128,149 @@ const TYPE_SECTIONS: {
   },
 ];
 
+type Granularity = "miesiac" | "rok";
+
 export function ReportsTab({
+  userId,
   categories,
   transactions,
   monthLabel,
+  currentYear,
   loading,
 }: {
+  userId: string;
   categories: Category[];
   transactions: Transaction[];
   monthLabel: string;
+  /** Rok aktualnie wybrany w globalnym filtrze u góry strony. */
+  currentYear: number;
   loading: boolean;
 }) {
-  const grouped = useMemo(
-    () => groupTransactions(categories, transactions),
-    [categories, transactions]
+  // Suwak „Miesiąc / Rok” – przełącza zakres danych dla wykresu, legendy
+  // i akordeonu poniżej, niezależnie od globalnego wyboru miesiąca w nagłówku.
+  const [granularity, setGranularity] = useState<Granularity>("miesiac");
+
+  // Dane całego roku pobierane w tle (niezależnie od suwaka), żeby przełączenie
+  // na „Rok” było natychmiastowe, bez migotania stanu ładowania.
+  const [yearTransactions, setYearTransactions] = useState<Transaction[]>([]);
+  const [yearLoading, setYearLoading] = useState(true);
+  const [yearError, setYearError] = useState<string | null>(null);
+
+  // Zmiana globalnego roku czyści stare dane roku bez efektu – dopasowanie stanu
+  // podczas renderu (react.dev/learn/you-might-not-need-an-effect), inaczej przez
+  // chwilę widać by było liczby z poprzedniego roku pod nową etykietą.
+  const [syncedYear, setSyncedYear] = useState(currentYear);
+  if (currentYear !== syncedYear) {
+    setSyncedYear(currentYear);
+    setYearLoading(true);
+    setYearTransactions([]);
+  }
+
+  const yearRequestSeq = useRef(0);
+  useEffect(() => {
+    const id = ++yearRequestSeq.current;
+    fetchYearlyTransactions(userId, currentYear).then((data) => {
+      if (id !== yearRequestSeq.current) return;
+      setYearError(data.error);
+      setYearTransactions(data.transactions);
+      setYearLoading(false);
+    });
+  }, [userId, currentYear]);
+
+  const categoryById = useMemo(
+    () => new Map(categories.map((c) => [String(c.id), c])),
+    [categories]
   );
 
+  const isYear = granularity === "rok";
+  const activeTransactions = isYear ? yearTransactions : transactions;
+  const activeLoading = isYear ? yearLoading : loading;
+  const periodLabel = isYear ? String(currentYear) : monthLabel;
+  const periodNoun = isYear ? "roku" : "miesiącu";
+
+  const grouped = useMemo(
+    () => groupTransactions(categories, activeTransactions),
+    [categories, activeTransactions]
+  );
   const expenses = grouped.wydatek;
-  const pieData = expenses.groups.map((g) => ({
-    name: g.category.name,
-    value: g.total,
-    fill: g.color,
-  }));
 
   return (
     <div className="flex flex-col gap-4">
+      <Tabs
+        value={granularity}
+        onValueChange={(v) => v && setGranularity(v as Granularity)}
+      >
+        <TabsList className="w-full sm:w-fit">
+          <TabsTrigger value="miesiac" className="sm:px-4">
+            <Calendar />
+            Miesiąc
+          </TabsTrigger>
+          <TabsTrigger value="rok" className="sm:px-4">
+            <CalendarRange />
+            Rok
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {isYear && yearError && (
+        <p role="alert" className="text-sm text-destructive">
+          Nie udało się pobrać danych roku: {yearError}
+        </p>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ChartPie className="size-4 text-muted-foreground" />
             Wydatki wg kategorii
           </CardTitle>
-          <CardDescription>Miesiąc: {monthLabel}</CardDescription>
+          <CardDescription>
+            {isYear ? "Rok" : "Miesiąc"}: {periodLabel}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {activeLoading ? (
             <p className="py-10 text-center text-muted-foreground">
               Ładowanie…
             </p>
-          ) : pieData.length === 0 ? (
-            <p className="py-10 text-center text-muted-foreground">
-              Brak wydatków w tym miesiącu.
-            </p>
           ) : (
             <div className="flex flex-col items-center gap-6 md:flex-row md:justify-around">
-              <ChartContainer
-                config={CHART_CONFIG}
-                className="aspect-square w-full max-w-[280px]"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        hideLabel
-                        formatter={(value, name, item) => (
-                          <div className="flex w-full items-center justify-between gap-4">
-                            <span className="flex items-center gap-2">
-                              <span
-                                className="size-2.5 rounded-[2px]"
-                                style={{ background: item.payload?.fill }}
-                              />
-                              {name}
-                            </span>
-                            <span className="font-mono font-medium tabular-nums">
-                              {currency.format(Number(value))}
-                            </span>
-                          </div>
-                        )}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={68}
-                    strokeWidth={2}
-                    isAnimationActive={false}
-                    paddingAngle={pieData.length > 1 ? 2 : 0}
-                  >
-                    <Label
-                      content={({ viewBox }) => {
-                        if (!viewBox || !("cx" in viewBox)) return null;
-                        return (
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                          >
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) - 6}
-                              className="fill-foreground text-base font-semibold"
-                            >
-                              {currency.format(expenses.total)}
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) + 14}
-                              className="fill-muted-foreground text-xs"
-                            >
-                              wydatki
-                            </tspan>
-                          </text>
-                        );
-                      }}
-                    />
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
+              <BudgetGauge
+                transactions={activeTransactions}
+                categoryById={categoryById}
+                periodNoun={periodNoun}
+              />
 
-              <ul className="flex w-full flex-col gap-2 md:max-w-sm">
-                {expenses.groups.map((g) => (
-                  <li
-                    key={String(g.category.id)}
-                    className="flex items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="size-2.5 shrink-0 rounded-[2px]"
-                        style={{ background: g.color }}
-                      />
-                      <span className="truncate">{g.category.name}</span>
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                      <span className="text-xs text-muted-foreground">
-                        {Math.round((g.total / expenses.total) * 100)}%
+              {expenses.groups.length === 0 ? (
+                <p className="w-full py-10 text-center text-muted-foreground md:max-w-sm">
+                  Brak wydatków w tym {periodNoun}.
+                </p>
+              ) : (
+                <ul className="flex w-full max-h-56 flex-col gap-2 overflow-y-auto pr-2 md:max-w-sm">
+                  {expenses.groups.map((g) => (
+                    <li
+                      key={String(g.category.id)}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="size-2.5 shrink-0 rounded-[2px]"
+                          style={{ background: g.color }}
+                        />
+                        <span className="truncate">{g.category.name}</span>
                       </span>
-                      <span className="font-medium">
-                        {currency.format(g.total)}
+                      <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round((g.total / expenses.total) * 100)}%
+                        </span>
+                        <span className="font-medium">
+                          {currency.format(g.total)}
+                        </span>
                       </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </CardContent>
@@ -274,11 +283,11 @@ export function ReportsTab({
             Struktura transakcji
           </CardTitle>
           <CardDescription>
-            {monthLabel} – rozwiń, aby zobaczyć kategorie i pojedyncze wpisy.
+            {periodLabel} – rozwiń, aby zobaczyć kategorie i pojedyncze wpisy.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {activeLoading ? (
             <p className="py-6 text-center text-muted-foreground">
               Ładowanie…
             </p>
@@ -302,7 +311,7 @@ export function ReportsTab({
                     <AccordionContent>
                       {section.groups.length === 0 ? (
                         <p className="py-2 pl-6 text-muted-foreground">
-                          Brak wpisów w tym miesiącu.
+                          Brak wpisów w tym {periodNoun}.
                         </p>
                       ) : (
                         <Accordion
