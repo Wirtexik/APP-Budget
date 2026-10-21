@@ -3,7 +3,9 @@
 //
 // Schemat bazy używany przez aplikację (SQL: supabase/schema.sql):
 //   categories(id, user_id, name, type)
-//   transactions(id, user_id, amount, date, description, category_id, created_at)
+//   transactions(id, user_id, amount, date, description, category_id, created_at,
+//                recurring_rule_id)
+//   recurring_rules – zlecenia stałe, patrz lib/recurring.ts
 // `amount` zawsze jest dodatnie; czy to wydatek, czy przychód, wynika z `categories.type`.
 // `created_at` musi być ustawiane automatycznie przez bazę (default now()) – aplikacja
 // używa go jako drugiego kryterium sortowania przy równych datach.
@@ -28,6 +30,8 @@ export interface Transaction {
   category_id: Id | null;
   /** Znacznik czasu zapisu wiersza – drugie kryterium sortowania po `date`. */
   created_at: string;
+  /** Zlecenie stałe, które utworzyło wpis (null dla wpisów ręcznych i po usunięciu zlecenia). */
+  recurring_rule_id: Id | null;
 }
 
 export const TYPE_LABEL: Record<CategoryType, string> = {

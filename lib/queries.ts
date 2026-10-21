@@ -18,6 +18,9 @@ import {
 } from "@/lib/categories";
 import { getSupabase } from "@/lib/supabase";
 
+const TRANSACTION_COLUMNS =
+  "id, amount, date, description, category_id, created_at, recurring_rule_id";
+
 export interface Resolved {
   id: Id | null;
   error: string | null;
@@ -149,7 +152,7 @@ export async function fetchDashboardData(
       .order("name"),
     supabase
       .from("transactions")
-      .select("id, amount, date, description, category_id, created_at")
+      .select(TRANSACTION_COLUMNS)
       .eq("user_id", userId)
       .gte("date", start)
       .lt("date", next)
@@ -181,7 +184,7 @@ export async function fetchYearlyTransactions(
 
   const { data, error } = await getSupabase()
     .from("transactions")
-    .select("id, amount, date, description, category_id, created_at")
+    .select(TRANSACTION_COLUMNS)
     .eq("user_id", userId)
     .gte("date", start)
     .lt("date", next)

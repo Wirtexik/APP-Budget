@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
-import { ChartPie, Clock, History, LayoutDashboard } from "lucide-react";
+import {
+  ChartPie,
+  Clock,
+  History,
+  LayoutDashboard,
+  Repeat,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { CategoryForm } from "@/components/dashboard/category-form";
@@ -19,6 +25,7 @@ import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TransactionForm } from "@/components/dashboard/transaction-form";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 import { TransactionTypeFilter } from "@/components/dashboard/transaction-type-filter";
+import { RecurringTab } from "@/components/recurring/recurring-tab";
 import {
   Card,
   CardContent,
@@ -39,6 +46,7 @@ import {
   type Transaction,
 } from "@/lib/budget";
 import { fetchDashboardData, type DashboardData } from "@/lib/queries";
+import { materializeRecurring } from "@/lib/recurring-queries";
 import { getSupabase } from "@/lib/supabase";
 
 const RECENT_LIMIT = 5;
@@ -94,11 +102,29 @@ export function Dashboard({ session }: { session: Session }) {
     if (id === requestSeq.current) apply(data);
   }, [userId, year, month, apply]);
 
+  // Zaległe wykonania zleceń stałych tworzymy raz, przy otwarciu aplikacji –
+  // przed pierwszym pobraniem danych, żeby nowe wpisy od razu były widoczne.
+  const materialized = useRef<Promise<void> | null>(null);
+
   useEffect(() => {
-    const id = ++requestSeq.current;
-    fetchDashboardData(userId, year, month).then((data) => {
-      if (id === requestSeq.current) apply(data);
+    materialized.current ??= materializeRecurring().then(({ error, created }) => {
+      if (error) {
+        toast.error("Nie udało się wykonać zleceń stałych", {
+          description: error,
+        });
+      } else if (created > 0) {
+        toast.success(
+          `Dodano ${created} ${pluralEntries(created)} ze zleceń stałych`
+        );
+      }
     });
+
+    const id = ++requestSeq.current;
+    materialized.current
+      .then(() => fetchDashboardData(userId, year, month))
+      .then((data) => {
+        if (id === requestSeq.current) apply(data);
+      });
   }, [userId, year, month, apply]);
 
   // Po zapisie: odśwież widok. Filtr miesiąca służy wyłącznie do wyświetlania –
@@ -189,6 +215,10 @@ export function Dashboard({ session }: { session: Session }) {
               <History />
               Historia
             </TabsTrigger>
+            <TabsTrigger value="zlecenia" className="sm:px-4">
+              <Repeat />
+              Zlecenia
+            </TabsTrigger>
             <TabsTrigger value="raporty" className="sm:px-4">
               <ChartPie />
               Raporty
@@ -273,6 +303,15 @@ export function Dashboard({ session }: { session: Session }) {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="zlecenia">
+            <RecurringTab
+              userId={userId}
+              categories={categories}
+              categoryById={categoryById}
+              onTransactionsChanged={refresh}
+            />
           </TabsContent>
 
           <TabsContent value="raporty">

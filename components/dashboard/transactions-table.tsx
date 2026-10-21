@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Repeat, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +63,18 @@ export function TransactionsTable({
                   <span className="hidden sm:inline">{formatDate(t.date)}</span>
                 </TableCell>
                 <TableCell>
-                  <div>{t.description || "—"}</div>
+                  <div className="flex items-center gap-1.5">
+                    {t.recurring_rule_id != null && (
+                      <Repeat
+                        role="img"
+                        aria-label="Ze zlecenia stałego"
+                        className="size-3.5 shrink-0 text-muted-foreground"
+                      >
+                        <title>Ze zlecenia stałego</title>
+                      </Repeat>
+                    )}
+                    <span>{t.description || "—"}</span>
+                  </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
                     {category?.name ?? "—"}
                   </div>
