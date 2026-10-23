@@ -8,7 +8,7 @@ Plan powstał na podstawie ARCHITECTURE.md i package.json. Lista błędów w eta
 |---|------|------|
 | 0 | Audyt błędów i higiena repo | Częściowo: dodano Vitest, reszta do sprawdzenia. |
 | 1 | Wydzielenie warstwy danych z `Dashboard` | Do zrobienia. |
-| 2 | Filtrowanie transakcji | Do zrobienia (jest tylko przełącznik Uznania/Obciążenia w Historii). |
+| 2 | Filtrowanie transakcji | Częściowo: w Historii wyszukiwarka (początki wyrazów w opisie i kategorii), menu „Filtry” (typ, wiele kategorii), menu „Sortuj” (data, kwota), w przeglądarce (`lib/filters.ts`). Zostaje: kwoty, zakres dat, stan w URL. |
 | 3 | Zlecenia stałe | **Zrobione** (baza, logika, interfejs, `pg_cron`). Układ na telefon przechodzi do etapu 4. |
 | 4 | Interfejs mobilny | Do zrobienia. |
 | 5 | Dopracowanie interfejsu | Do zrobienia. |

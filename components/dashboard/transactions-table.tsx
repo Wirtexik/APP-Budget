@@ -18,12 +18,15 @@ export function TransactionsTable({
   transactions,
   categoryById,
   loading,
+  emptyText = "Brak transakcji w tym miesiącu.",
   onEdit,
   onDelete,
 }: {
   transactions: Transaction[];
   categoryById: Map<string, Category>;
   loading: boolean;
+  /** Komunikat pustej listy (np. gdy filtry niczego nie znalazły). */
+  emptyText?: string;
   onEdit: (t: Transaction) => void;
   onDelete: (t: Transaction) => void;
 }) {
@@ -45,7 +48,7 @@ export function TransactionsTable({
               colSpan={5}
               className="h-24 text-center text-muted-foreground"
             >
-              {loading ? "Ładowanie…" : "Brak transakcji w tym miesiącu."}
+              {loading ? "Ładowanie…" : emptyText}
             </TableCell>
           </TableRow>
         ) : (

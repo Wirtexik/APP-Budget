@@ -47,7 +47,7 @@ Zasady, na których opiera się cała aplikacja:
 - Zarządzanie kategoriami (`CategoryForm`): dodawanie, edycja nazwy i typu, usuwanie; lista własnych kategorii przewija się (`max-h-32`).
 - 5 ostatnich transakcji z edycją i usuwaniem.
 
-**Historia** – pełna lista transakcji miesiąca z edycją i usuwaniem oraz przełącznikami „Uznania” / „Obciążenia” (ponowne kliknięcie aktywnego wyłącza filtr).
+**Historia** – pełna lista transakcji miesiąca z edycją i usuwaniem oraz paskiem (`HistoryFilters`, logika w `lib/filters.ts`): wyszukiwarka w opisie i nazwie kategorii (od pierwszej litery, dopasowuje tylko **początki wyrazów**, bez wielkości liter i polskich znaków), rozwijane menu „Filtry” (typ Uznania/Obciążenia, „Zlecenia stałe” – tylko wpisy z `recurring_rule_id`, łączy się z typem – i wiele kategorii, licznik na przycisku), menu „Sortuj” (data lub kwota, rosnąco/malejąco; nic nie zaznaczone = kolejność domyślna) i „Wyczyść wszystko”. Filtrowanie odbywa się w przeglądarce na danych miesiąca; filtry zostają przy zmianie miesiąca.
 
 **Zlecenia** – lista zleceń stałych (status, harmonogram, następny termin) z edycją, wstrzymaniem/wznowieniem jednym kliknięciem i usuwaniem, formularz dodawania/edycji (presety częstotliwości, zakończenie: bezterminowo / data / liczba wykonań) oraz „Nadchodzące” na 30 dni. `materializeRecurring()` jest wołane raz przy otwarciu aplikacji (przed pierwszym pobraniem danych) i po każdej zmianie zlecenia. Transakcje ze zleceń mają w tabelach ikonę `Repeat`.
 
@@ -74,6 +74,7 @@ lib/
   budget.ts             typy, formatowanie, zakresy dat, sumy (computeTotals)
   categories.ts         kategorie domyślne, listy wyboru
   queries.ts            zapytania do Supabase (dane miesiąca/roku, zapisy, aktualizacje)
+  filters.ts            filtry i sortowanie Historii (czysta logika)
   recurring.ts          zlecenia stałe: typy, presety, walidacja formularza, opisy (czysta logika)
   recurring-queries.ts  zlecenia stałe: CRUD, wstrzymanie, RPC materialize/upcoming
   *.test.ts             testy Vitest czystej logiki

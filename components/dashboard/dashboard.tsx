@@ -24,7 +24,7 @@ import { ReportsTab } from "@/components/dashboard/reports-tab";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TransactionForm } from "@/components/dashboard/transaction-form";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
-import { TransactionTypeFilter } from "@/components/dashboard/transaction-type-filter";
+import { HistoryFilters } from "@/components/dashboard/history-filters";
 import { RecurringTab } from "@/components/recurring/recurring-tab";
 import {
   Card,
@@ -42,9 +42,14 @@ import {
   monthRange,
   pluralEntries,
   type Category,
-  type CategoryType,
   type Transaction,
 } from "@/lib/budget";
+import {
+  EMPTY_FILTERS,
+  filterTransactions,
+  hasActiveFilters,
+  type HistoryFilters as HistoryFiltersValue,
+} from "@/lib/filters";
 import { fetchDashboardData, type DashboardData } from "@/lib/queries";
 import { materializeRecurring } from "@/lib/recurring-queries";
 import { getSupabase } from "@/lib/supabase";
@@ -75,10 +80,9 @@ export function Dashboard({ session }: { session: Session }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
 
-  // Filtr „Uznania / Obciążenia” w Historii. `null` = pokaż wszystko.
-  const [historyFilter, setHistoryFilter] = useState<CategoryType | null>(
-    null
-  );
+  // Filtry i sortowanie Historii. Zostają przy zmianie miesiąca.
+  const [historyFilters, setHistoryFilters] =
+    useState<HistoryFiltersValue>(EMPTY_FILTERS);
 
   // Numer ostatniego żądania: spóźniona odpowiedź dla poprzedniego miesiąca
   // (albo sprzed zapisu) nie nadpisze nowszych danych.
@@ -180,14 +184,13 @@ export function Dashboard({ session }: { session: Session }) {
     [monthTransactions, categoryById]
   );
 
-  // Historia: „Uznania” pokazują tylko przychody, „Obciążenia” tylko wydatki,
-  // brak wyboru pokazuje wszystko wymieszane (tak jak dotąd).
-  const historyTransactions = useMemo(() => {
-    if (!historyFilter) return monthTransactions;
-    return monthTransactions.filter(
-      (t) => categoryById.get(String(t.category_id))?.type === historyFilter
-    );
-  }, [monthTransactions, categoryById, historyFilter]);
+  // Historia: filtrowanie w przeglądarce na danych miesiąca – wynik zmienia się
+  // od razu, przy każdej wpisanej literze.
+  const historyTransactions = useMemo(
+    () => filterTransactions(monthTransactions, categoryById, historyFilters),
+    [monthTransactions, categoryById, historyFilters]
+  );
+  const historyFiltered = hasActiveFilters(historyFilters);
 
   return (
     <main className="min-h-svh bg-linear-to-b from-blue-50 to-background dark:from-blue-950/30">
@@ -283,21 +286,28 @@ export function Dashboard({ session }: { session: Session }) {
                 </CardTitle>
                 <CardDescription>
                   {monthLabel}
-                  {!loading && historyFilter
+                  {!loading && historyFiltered
                     ? ` · ${historyTransactions.length} z ${monthTransactions.length} ${pluralEntries(monthTransactions.length)}`
                     : !loading &&
                       ` · ${monthTransactions.length} ${pluralEntries(monthTransactions.length)}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <TransactionTypeFilter
-                  value={historyFilter}
-                  onChange={setHistoryFilter}
+                <HistoryFilters
+                  value={historyFilters}
+                  onChange={setHistoryFilters}
+                  categories={categories}
+                  categoryById={categoryById}
                 />
                 <TransactionsTable
                   transactions={historyTransactions}
                   categoryById={categoryById}
                   loading={loading}
+                  emptyText={
+                    historyFiltered && monthTransactions.length > 0
+                      ? "Brak transakcji pasujących do filtrów."
+                      : undefined
+                  }
                   onEdit={openEdit}
                   onDelete={setPendingDelete}
                 />
