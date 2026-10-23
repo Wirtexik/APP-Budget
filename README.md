@@ -13,7 +13,13 @@ z backendem w Supabase.
 - **Kokpit:** karty Saldo / Przychody / Wydatki, formularz wydatku, szybkie
   dodawanie przychodu (przycisk „+”), zarządzanie kategoriami i 5 ostatnich
   transakcji.
-- **Historia:** pełna lista transakcji miesiąca z edycją i usuwaniem.
+- **Historia:** pełna lista transakcji miesiąca z edycją i usuwaniem,
+  wyszukiwarką (od pierwszej litery, początki wyrazów w opisie i kategorii),
+  menu „Filtry” (uznania, obciążenia, zlecenia stałe, kategorie) i „Sortuj”
+  (data, kwota).
+- **Zlecenia stałe:** cykliczne wpisy (dziennie, co tydzień, co miesiąc, co
+  rok) z wstrzymaniem, edycją i podglądem nadchodzących terminów. Wykonują się
+  przy otwarciu aplikacji i raz dziennie przez `pg_cron`.
 - **Raporty:** wykres kołowy wydatków według kategorii oraz rozwijane drzewo
   Wydatki / Przychody → kategorie → transakcje.
 - **Kategorie domyślne** (Jedzenie, Transport, Wynagrodzenie…) są zdefiniowane
@@ -46,6 +52,8 @@ Wymagania: Node.js 20+ i projekt w [Supabase](https://supabase.com).
 
 3. Utwórz tabele i reguły RLS: wklej zawartość
    [`supabase/schema.sql`](supabase/schema.sql) w *SQL Editor* i uruchom.
+   Potem, w kolejności nazw, uruchom pliki z
+   [`supabase/migrations/`](supabase/migrations/) (zlecenia stałe i `pg_cron`).
 
 4. Dodaj użytkownika w *Authentication → Users → Add user*. Adres e-mail musi
    mieć postać `login@budzet.local` (użytkownik wpisze w aplikacji tylko
@@ -68,6 +76,7 @@ Wymagania: Node.js 20+ i projekt w [Supabase](https://supabase.com).
 | `npm start`         | uruchomienie buildu produkcyjnego      |
 | `npm run lint`      | ESLint                                 |
 | `npm run typecheck` | sprawdzenie typów TypeScript           |
+| `npm test`          | testy Vitest (czysta logika w `lib/`)  |
 
 ## Struktura projektu
 
@@ -78,11 +87,14 @@ app/
   layout.tsx          layout główny (czcionki, komunikaty Toaster)
 components/
   dashboard/          komponenty ekranu głównego (Dashboard i jego części)
+  recurring/          zakładka „Zlecenia” (zlecenia stałe)
   ui/                 komponenty shadcn/ui
 lib/
   auth.ts             login <-> e-mail (@budzet.local)
   budget.ts           typy, formatowanie, daty, sumy
   categories.ts       kategorie domyślne i budowa list wyboru
+  filters.ts          filtry i sortowanie Historii
+  recurring*.ts       zlecenia stałe: logika i zapytania
   queries.ts          zapytania do Supabase (dane miesiąca, zapis wpisów)
   supabase.ts         klient Supabase (tworzony przy pierwszym użyciu)
 supabase/

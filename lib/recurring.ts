@@ -4,7 +4,7 @@
 // supabase/migrations/20261018120000_recurring_rules.sql). Ten plik celowo nie
 // powtarza algorytmu dat z SQL – kolejne terminy podaje RPC `upcoming_recurring`.
 
-import { dateKey, formatDate, type Id } from "@/lib/budget";
+import { MAX_AMOUNT, dateKey, formatDate, type Id } from "@/lib/budget";
 
 export type Frequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -112,10 +112,14 @@ export interface RecurringRulePayload {
   max_occurrences: number | null;
 }
 
+/** Ile dni do przodu pokazuje sekcja „Nadchodzące”. */
+export const UPCOMING_DAYS = 30;
+
 export const MAX_INTERVAL = 100;
 export const MAX_OCCURRENCES = 10000;
-// numeric(12, 2) w bazie
-const MAX_AMOUNT = 9_999_999_999.99;
+// Kwota: limit `MAX_AMOUNT` z lib/budget.ts. Kolumna `recurring_rules.amount`
+// ma numeric(12, 2), ale wykonanie trafia do `transactions.amount numeric(10,2)`,
+// więc obowiązuje węższy limit transakcji.
 
 export function endModeOf(
   rule: Pick<RecurringRule, "end_date" | "max_occurrences">

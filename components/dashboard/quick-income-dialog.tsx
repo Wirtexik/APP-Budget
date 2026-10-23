@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Plus, TrendingUp } from "lucide-react";
 
 import { CategorySelect } from "@/components/dashboard/category-select";
@@ -15,83 +15,31 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { dateKey, parseAmount, type Category, type Id } from "@/lib/budget";
-import { insertTransaction, resolveCategory } from "@/lib/queries";
+import { useTransactionForm } from "@/lib/hooks/use-transaction-form";
 
-export function QuickIncomeDialog({
-  userId,
-  categories,
-  onSaved,
-}: {
-  userId: string;
-  categories: Category[];
-  onSaved: (date?: string) => Promise<void>;
-}) {
+export function QuickIncomeDialog() {
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  // Własna data tego okna – niezależna od formularza wydatków i od filtra
-  // miesiąca u góry strony (ten służy tylko do filtrowania widoku).
-  const [date, setDate] = useState(() => dateKey(new Date()));
-  const [categoryValue, setCategoryValue] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  function reset() {
-    setAmount("");
-    setDate(dateKey(new Date()));
-    setCategoryValue(null);
-    setDescription("");
-    setError(null);
-  }
+  const {
+    amount,
+    setAmount,
+    date,
+    setDate,
+    description,
+    setDescription,
+    categoryValue,
+    setCategoryValue,
+    type,
+    categories,
+    error,
+    saving,
+    handleSubmit,
+    reset,
+  } = useTransactionForm({ kind: "create", type: "przychod" });
 
   function handleOpenChange(next: boolean) {
     if (saving) return;
     setOpen(next);
     if (!next) reset();
-  }
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-
-    const value = parseAmount(amount);
-    if (value === null) {
-      setError("Podaj kwotę większą od zera.");
-      return;
-    }
-
-    if (!date) {
-      setError("Podaj datę.");
-      return;
-    }
-
-    if (!categoryValue) {
-      setError("Wybierz kategorię.");
-      return;
-    }
-
-    setSaving(true);
-
-    const category = await resolveCategory(userId, categories, categoryValue);
-    const failure =
-      category.error ??
-      (await insertTransaction(userId, category.id as Id, {
-        amount: value,
-        date,
-        description,
-      }));
-
-    if (failure) {
-      setSaving(false);
-      setError(failure);
-      return;
-    }
-
-    await onSaved(date);
-    setSaving(false);
-    setOpen(false);
-    reset();
   }
 
   return (
@@ -103,7 +51,8 @@ export function QuickIncomeDialog({
         title="Szybko dodaj przychód"
         className="rounded-full border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
         onClick={() => {
-          setDate(dateKey(new Date()));
+          // Data na dziś także wtedy, gdy aplikacja jest otwarta od wczoraj.
+          reset();
           setOpen(true);
         }}
       >
@@ -112,7 +61,11 @@ export function QuickIncomeDialog({
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={async (e) => {
+              if (await handleSubmit(e)) setOpen(false);
+            }}
+            className="flex flex-col gap-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <TrendingUp className="size-4 text-emerald-600" />
@@ -156,7 +109,7 @@ export function QuickIncomeDialog({
               <Label htmlFor="quick-category">Kategoria</Label>
               <CategorySelect
                 id="quick-category"
-                type="przychod"
+                type={type}
                 categories={categories}
                 value={categoryValue}
                 onChange={setCategoryValue}

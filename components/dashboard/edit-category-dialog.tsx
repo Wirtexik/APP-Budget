@@ -22,20 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TYPE_ITEMS, type Category, type CategoryType } from "@/lib/budget";
+import { useBudgetData } from "@/lib/hooks/budget-data";
 import { updateCategory } from "@/lib/queries";
 
 // Okno edycji własnej kategorii: nazwa i typ. `category === null` oznacza „zamknięte”.
 export function EditCategoryDialog({
   category,
-  userId,
   onClose,
-  onSaved,
 }: {
   category: Category | null;
-  userId: string;
   onClose: () => void;
-  onSaved: () => Promise<void>;
 }) {
+  const { userId, refresh: onSaved } = useBudgetData();
   // `key` na wywołaniu w rodzicu resetuje ten stan przy każdym nowym otwarciu.
   const [name, setName] = useState(category?.name ?? "");
   const [type, setType] = useState<CategoryType>(category?.type ?? "wydatek");

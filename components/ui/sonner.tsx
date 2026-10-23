@@ -1,14 +1,15 @@
 "use client"
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useTheme } from "@/lib/hooks/use-theme"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-// Aplikacja ma tylko jasny motyw (nie ma przełącznika), więc komunikaty też są jasne,
-// niezależnie od motywu systemu.
+// Komunikaty idą za motywem aplikacji (przełącznik albo motyw systemu).
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme()
   return (
     <Sonner
-      theme="light"
+      theme={theme}
       className="toaster group"
       icons={{
         success: (

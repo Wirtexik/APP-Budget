@@ -12,24 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { currency, type Category } from "@/lib/budget";
+import { currency } from "@/lib/budget";
+import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
 import { describeSchedule, type RecurringRule } from "@/lib/recurring";
 import { deleteRecurringRule } from "@/lib/recurring-queries";
 
 // Potwierdzenie usunięcia zlecenia. `rule === null` oznacza „zamknięte”.
 export function DeleteRecurringDialog({
   rule,
-  userId,
-  categoryById,
   onClose,
-  onDeleted,
 }: {
   rule: RecurringRule | null;
-  userId: string;
-  categoryById: Map<string, Category>;
   onClose: () => void;
-  onDeleted: () => Promise<void>;
 }) {
+  const { userId, categoryById } = useBudgetData();
+  const { afterChange: onDeleted } = useRecurringData();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +53,7 @@ export function DeleteRecurringDialog({
   }
 
   const name = rule
-    ? rule.description || categoryById.get(String(rule.category_id))?.name || "Zlecenie"
+    ? rule.description || categoryById.get(rule.category_id)?.name || "Zlecenie"
     : "";
 
   return (

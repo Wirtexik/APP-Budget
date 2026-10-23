@@ -10,7 +10,8 @@
 // `created_at` musi być ustawiane automatycznie przez bazę (default now()) – aplikacja
 // używa go jako drugiego kryterium sortowania przy równych datach.
 
-export type Id = string | number;
+// Wszystkie klucze w bazie to `uuid`, a supabase-js zwraca je jako tekst.
+export type Id = string;
 export type CategoryType = "wydatek" | "przychod";
 
 export interface CategoryRef {
@@ -20,6 +21,13 @@ export interface CategoryRef {
 
 export interface Category extends CategoryRef {
   id: Id;
+}
+
+/** Globalny filtr czasu: oglądany miesiąc. */
+export interface Period {
+  year: number;
+  /** Numer miesiąca liczony od 0 (styczeń = 0). */
+  month: number;
 }
 
 export interface Transaction {
@@ -33,6 +41,12 @@ export interface Transaction {
   /** Zlecenie stałe, które utworzyło wpis (null dla wpisów ręcznych i po usunięciu zlecenia). */
   recurring_rule_id: Id | null;
 }
+
+// Kategoria wpisu; `undefined`, gdy wpis nie ma kategorii albo nie ma jej na liście.
+export const categoryOf = (
+  item: { category_id: Id | null },
+  categoryById: Map<Id, Category>
+) => (item.category_id ? categoryById.get(item.category_id) : undefined);
 
 export const TYPE_LABEL: Record<CategoryType, string> = {
   wydatek: "Wydatek",
@@ -74,10 +88,36 @@ export function yearRange(year: number) {
   };
 }
 
+// Największa kwota, jaką przyjmuje `transactions.amount numeric(10,2)`. Ten sam
+// limit obowiązuje zlecenia stałe – ich wykonania trafiają do `transactions`.
+export const MAX_AMOUNT = 99_999_999.99;
+
+// Komunikat formularzy, gdy `parseAmount` zwróci null.
+export const AMOUNT_ERROR =
+  "Podaj kwotę od 0,01 do 99 999 999,99 zł (najwyżej 2 miejsca po przecinku).";
+
+// Cyfry, opcjonalnie przecinek lub kropka i najwyżej 2 miejsca po nim.
+const AMOUNT_PATTERN = /^\d*[.,]?\d{0,2}$/;
+
+// Kwota wpisana przez użytkownika („1 000,50”, „12.5”). Spacje (także twarde,
+// np. z wklejonej kwoty) są pomijane. Zwraca null dla kwoty niepoprawnej,
+// niedodatniej, z ponad 2 miejscami po przecinku albo większej niż MAX_AMOUNT.
 export function parseAmount(raw: string) {
-  const value = Number(raw.replace(",", "."));
-  return Number.isFinite(value) && value > 0 ? value : null;
+  const compact = raw.replace(/\s/g, "");
+  if (!AMOUNT_PATTERN.test(compact)) return null;
+  const value = Number(compact.replace(",", "."));
+  return Number.isFinite(value) && value > 0 && value <= MAX_AMOUNT
+    ? value
+    : null;
 }
+
+// Sumy liczone w groszach (liczbach całkowitych), żeby nie zbierać błędów
+// zmiennoprzecinkowych (0.1 + 0.2 !== 0.3) – inaczej saldo bliskie zeru
+// mogłoby się wyświetlić jako „−0,00 zł”.
+export const toGrosze = (amount: number | string) =>
+  Math.round(Number(amount) * 100);
+
+export const fromGrosze = (grosze: number) => grosze / 100;
 
 export function pluralEntries(n: number) {
   if (n === 1) return "wpis";
@@ -102,6 +142,19 @@ export const MONTH_NAMES = [
   "Listopad",
   "Grudzień",
 ];
+
+// Bieżący miesiąc wg zegara urządzenia – domyślny okres aplikacji.
+export function currentPeriod(): Period {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() };
+}
+
+export const samePeriod = (a: Period, b: Period) =>
+  a.year === b.year && a.month === b.month;
+
+// Etykieta miesiąca do opisów kart, np. „październik 2026”.
+export const periodLabel = ({ year, month }: Period) =>
+  `${MONTH_NAMES[month].toLowerCase()} ${year}`;
 
 export const MONTH_ITEMS = MONTH_NAMES.map((label, i) => ({
   value: String(i),
@@ -133,9 +186,13 @@ export function computeTotals(
   let income = 0;
   let expenses = 0;
   for (const t of transactions) {
-    const type = categoryById.get(String(t.category_id))?.type;
-    if (type === "przychod") income += Number(t.amount);
-    else if (type === "wydatek") expenses += Number(t.amount);
+    const type = categoryOf(t, categoryById)?.type;
+    if (type === "przychod") income += toGrosze(t.amount);
+    else if (type === "wydatek") expenses += toGrosze(t.amount);
   }
-  return { income, expenses, balance: income - expenses };
+  return {
+    income: fromGrosze(income),
+    expenses: fromGrosze(expenses),
+    balance: fromGrosze(income - expenses),
+  };
 }

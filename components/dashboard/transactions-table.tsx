@@ -2,6 +2,7 @@
 
 import { Pencil, Repeat, Trash2 } from "lucide-react";
 
+import { SignedAmount } from "@/components/shared/signed-amount";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -11,7 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { currency, formatDate, type Category, type Transaction } from "@/lib/budget";
+import {
+  categoryOf,
+  formatDate,
+  type Category,
+  type Transaction,
+} from "@/lib/budget";
 
 // Tabela transakcji z kolumną „Akcje” (edycja / usuwanie) – wspólna dla kokpitu i historii.
 export function TransactionsTable({
@@ -53,9 +59,7 @@ export function TransactionsTable({
           </TableRow>
         ) : (
           transactions.map((t) => {
-            const category = categoryById.get(String(t.category_id));
-            const isIncome = category?.type === "przychod";
-            const amount = Number(t.amount);
+            const category = categoryOf(t, categoryById);
             return (
               <TableRow key={t.id}>
                 <TableCell className="whitespace-nowrap" title={formatDate(t.date)}>
@@ -85,14 +89,8 @@ export function TransactionsTable({
                 <TableCell className="hidden sm:table-cell">
                   {category?.name ?? "—"}
                 </TableCell>
-                <TableCell
-                  className={`text-right tabular-nums ${
-                    isIncome ? "text-emerald-600" : ""
-                  }`}
-                >
-                  {category
-                    ? `${isIncome ? "+" : "−"}${currency.format(amount)}`
-                    : currency.format(amount)}
+                <TableCell className="text-right">
+                  <SignedAmount amount={t.amount} category={category} />
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">

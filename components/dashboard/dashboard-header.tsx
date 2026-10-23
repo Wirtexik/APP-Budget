@@ -2,6 +2,7 @@
 
 import { CalendarDays, LogOut, PiggyBank } from "lucide-react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,15 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MONTH_ITEMS, YEAR_ITEMS } from "@/lib/budget";
+import { MONTH_ITEMS, YEAR_ITEMS, type Period } from "@/lib/budget";
 
-export interface Period {
-  year: number;
-  /** Numer miesiąca liczony od 0 (styczeń = 0). */
-  month: number;
-}
-
-// Nagłówek: nazwa aplikacji, globalny filtr miesiąca i roku oraz wylogowanie.
+// Nagłówek: nazwa aplikacji, globalny filtr miesiąca i roku, motyw i wylogowanie.
 export function DashboardHeader({
   login,
   period,
@@ -89,10 +84,13 @@ export function DashboardHeader({
         </Select>
       </div>
 
-      <Button variant="outline" onClick={onSignOut} aria-label="Wyloguj">
-        <LogOut />
-        <span className="hidden sm:inline">Wyloguj</span>
-      </Button>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <Button variant="outline" onClick={onSignOut} aria-label="Wyloguj">
+          <LogOut />
+          <span className="hidden sm:inline">Wyloguj</span>
+        </Button>
+      </div>
     </header>
   );
 }

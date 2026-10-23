@@ -23,13 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  parseAmount,
-  type Category,
-  type CategoryType,
-  type Id,
-} from "@/lib/budget";
+import { parseAmount, type Category, type CategoryType } from "@/lib/budget";
 import { valueForCategory } from "@/lib/categories";
+import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
 import { resolveCategory, type Resolved } from "@/lib/queries";
 import {
   MAX_OCCURRENCES,
@@ -95,19 +91,13 @@ export function RecurringRuleDialog({
   open,
   onOpenChange,
   rule,
-  userId,
-  categories,
-  categoryById,
-  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rule: RecurringRule | null;
-  userId: string;
-  categories: Category[];
-  categoryById: Map<string, Category>;
-  onSaved: () => Promise<void>;
 }) {
+  const { userId, categories, categoryById } = useBudgetData();
+  const { afterChange } = useRecurringData();
   const [saving, setSaving] = useState(false);
 
   return (
@@ -121,13 +111,13 @@ export function RecurringRuleDialog({
         <RecurringRuleForm
           rule={rule}
           category={
-            rule ? categoryById.get(String(rule.category_id)) : undefined
+            rule ? categoryById.get(rule.category_id) : undefined
           }
           userId={userId}
           categories={categories}
           onSavingChange={setSaving}
           onDone={() => onOpenChange(false)}
-          onSaved={onSaved}
+          onSaved={afterChange}
         />
       </DialogContent>
     </Dialog>
@@ -261,8 +251,8 @@ function RecurringRuleForm({
     const failure =
       resolved.error ??
       (rule
-        ? await updateRecurringRule(userId, rule.id, resolved.id as Id, payload)
-        : await insertRecurringRule(userId, resolved.id as Id, payload));
+        ? await updateRecurringRule(userId, rule.id, resolved.id, payload)
+        : await insertRecurringRule(userId, resolved.id, payload));
 
     if (failure) {
       setBusy(false);

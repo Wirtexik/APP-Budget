@@ -4,7 +4,8 @@
 -- Odtworzony 2026-10-18 z prawdziwej bazy (information_schema.columns + pg_policies).
 -- Zweryfikowane: nazwy i typy kolumn, wartości domyślne, NULL/NOT NULL, polityki RLS.
 -- NIEzweryfikowane (oznaczone "niezweryfikowane"): klucze obce i ich ON DELETE,
--- ograniczenia CHECK, precyzja `amount`, indeksy, role w politykach.
+-- ograniczenia CHECK, indeksy, role w politykach. Precyzja `transactions.amount`
+-- zweryfikowana osobno 2026-10-23.
 --
 -- Uwagi dla kodu aplikacji:
 --   * `id` to uuid (gen_random_uuid()), nie liczba.
@@ -15,6 +16,8 @@
 -- Po tym pliku uruchom po kolei migracje z supabase/migrations/:
 --   20261018120000_recurring_rules.sql – zlecenia stałe (recurring_rules,
 --   transactions.recurring_rule_id, funkcje materialize_recurring / upcoming_recurring)
+--   20261023120000_recurring_cron.sql – pg_cron: materialize_recurring() codziennie
+--   o 23:05 UTC (sama włącza rozszerzenie pg_cron)
 
 create table if not exists public.categories (
   id         uuid primary key default gen_random_uuid(),
@@ -33,8 +36,9 @@ create table if not exists public.transactions (
   -- niezweryfikowane: FK i jego ON DELETE (aplikacja i tak blokuje usunięcie
   -- kategorii z transakcjami)
   category_id uuid references public.categories (id),
-  -- niezweryfikowane: precyzja i CHECK (amount > 0)
-  amount      numeric not null,
+  -- precyzja zweryfikowana 2026-10-23 (numeric(10,2): maks. 99 999 999,99);
+  -- niezweryfikowane: CHECK (amount > 0)
+  amount      numeric(10, 2) not null,
   description text,
   date        date not null,
   created_at  timestamptz default now()

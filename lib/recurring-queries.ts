@@ -5,6 +5,7 @@
 // i next_run_date ustawia baza (trigger nadpisałby je i tak).
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Id } from "@/lib/budget";
+import { errorMessage, type ErrorOverrides } from "@/lib/errors";
 import type {
   RecurringRule,
   RecurringRulePayload,
@@ -18,22 +19,21 @@ const RULE_COLUMNS =
 
 const NOT_SAVED = "Nie zapisano zmian – zlecenie nie istnieje albo brak uprawnień do edycji.";
 
-// Kody błędów PostgreSQL / PostgREST na komunikaty dla użytkownika.
-function errorMessage(error: PostgrestError): string {
-  switch (error.code) {
-    case "23503":
-      return "Wybrana kategoria nie istnieje albo nie należy do Ciebie.";
-    case "23514":
-      return "Niepoprawne dane zlecenia (sprawdź kwotę, odstęp i daty).";
-    case "42883":
-    case "PGRST202":
-    case "42P01":
-    case "PGRST205":
-      return "Baza nie obsługuje jeszcze zleceń stałych – uruchom migrację recurring_rules.";
-    default:
-      return error.message;
-  }
-}
+const NO_MIGRATION =
+  "Baza nie obsługuje jeszcze zleceń stałych – uruchom migrację recurring_rules.";
+
+// Komunikaty właściwe zleceniom; pozostałe kody tłumaczy lib/errors.ts.
+const RECURRING_ERRORS: ErrorOverrides = {
+  "23503": "Wybrana kategoria nie istnieje albo nie należy do Ciebie.",
+  "23514": "Niepoprawne dane zlecenia (sprawdź kwotę, odstęp i daty).",
+  "42883": NO_MIGRATION,
+  PGRST202: NO_MIGRATION,
+  "42P01": NO_MIGRATION,
+  PGRST205: NO_MIGRATION,
+};
+
+const recurringError = (error: PostgrestError) =>
+  errorMessage(error, RECURRING_ERRORS);
 
 export interface RecurringRulesData {
   error: string | null;
@@ -50,7 +50,7 @@ export async function fetchRecurringRules(userId: string): Promise<RecurringRule
     .order("created_at", { ascending: false });
 
   return {
-    error: error ? errorMessage(error) : null,
+    error: error ? recurringError(error) : null,
     rules: (data ?? []) as RecurringRule[],
   };
 }
@@ -63,7 +63,7 @@ export async function insertRecurringRule(
   const { error } = await getSupabase()
     .from("recurring_rules")
     .insert({ ...payload, user_id: userId, category_id: categoryId });
-  return error ? errorMessage(error) : null;
+  return error ? recurringError(error) : null;
 }
 
 // Zmiana dotyczy tylko przyszłych wykonań – wykonane transakcje zostają bez zmian,
@@ -81,7 +81,7 @@ export async function updateRecurringRule(
     .eq("user_id", userId)
     .select("id");
 
-  if (error) return errorMessage(error);
+  if (error) return recurringError(error);
   // Przy braku uprawnień (RLS) Supabase nie zgłasza błędu, tylko aktualizuje 0 wierszy.
   if (!data?.length) return NOT_SAVED;
   return null;
@@ -96,7 +96,7 @@ export async function setRecurringRuleActive(userId: string, id: Id, active: boo
     .eq("user_id", userId)
     .select("id");
 
-  if (error) return errorMessage(error);
+  if (error) return recurringError(error);
   if (!data?.length) return NOT_SAVED;
   return null;
 }
@@ -110,7 +110,7 @@ export async function deleteRecurringRule(userId: string, id: Id) {
     .eq("user_id", userId)
     .select("id");
 
-  if (error) return errorMessage(error);
+  if (error) return recurringError(error);
   if (!data?.length) {
     return "Nie usunięto – zlecenie nie istnieje albo brak uprawnień.";
   }
@@ -127,7 +127,7 @@ export interface MaterializeResult {
 // Wołać przed pobraniem danych miesiąca, żeby nowe wpisy od razu były widoczne.
 export async function materializeRecurring(): Promise<MaterializeResult> {
   const { data, error } = await getSupabase().rpc("materialize_recurring");
-  if (error) return { error: errorMessage(error), created: 0 };
+  if (error) return { error: recurringError(error), created: 0 };
   return { error: null, created: Number(data ?? 0) };
 }
 
@@ -143,7 +143,7 @@ export async function fetchUpcoming(until: string): Promise<UpcomingData> {
     .order("occurs_on", { ascending: true });
 
   return {
-    error: error ? errorMessage(error) : null,
+    error: error ? recurringError(error) : null,
     occurrences: (data ?? []) as UpcomingOccurrence[],
   };
 }

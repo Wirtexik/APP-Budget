@@ -1,7 +1,14 @@
 // Filtrowanie i sortowanie listy transakcji w Historii (czysta logika, bez Supabase).
 // Działa na transakcjach już pobranych dla wybranego miesiąca, więc wynik
 // zmienia się od razu przy każdej wpisanej literze.
-import type { Category, CategoryType, Id, Transaction } from "@/lib/budget";
+import {
+  TYPE_ITEMS,
+  categoryOf,
+  type Category,
+  type CategoryType,
+  type Id,
+  type Transaction,
+} from "@/lib/budget";
 
 export type SortKey = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
 
@@ -17,8 +24,8 @@ export interface HistoryFilters {
   type: CategoryType | null;
   /** Tylko wpisy utworzone przez zlecenia stałe; łączy się z typem. */
   recurring: boolean;
-  /** Id wybranych kategorii (jako tekst); pusta lista = wszystkie kategorie. */
-  categoryIds: string[];
+  /** Id wybranych kategorii; pusta lista = wszystkie kategorie. */
+  categoryIds: Id[];
   /** Szukane początki wyrazów w opisie i nazwie kategorii; pusty = bez wyszukiwania. */
   query: string;
   /** `null` = kolejność domyślna (jak z bazy: data, potem czas zapisu, malejąco). */
@@ -71,10 +78,10 @@ export function filterTransactions(
   const selected = new Set(filters.categoryIds);
 
   const filtered = transactions.filter((t) => {
-    const category = categoryById.get(String(t.category_id));
+    const category = categoryOf(t, categoryById);
     if (filters.type && category?.type !== filters.type) return false;
     if (filters.recurring && t.recurring_rule_id == null) return false;
-    if (selected.size > 0 && !selected.has(String(t.category_id))) return false;
+    if (selected.size > 0 && (!t.category_id || !selected.has(t.category_id))) return false;
     return matchesQuery(
       `${t.description ?? ""} ${category?.name ?? ""}`,
       filters.query
@@ -141,9 +148,50 @@ export function withType(
   };
 }
 
-export function toggleCategory(categoryIds: string[], id: Id): string[] {
-  const key = String(id);
-  return categoryIds.includes(key)
-    ? categoryIds.filter((c) => c !== key)
-    : [...categoryIds, key];
+export function toggleCategory(categoryIds: Id[], id: Id): Id[] {
+  return categoryIds.includes(id)
+    ? categoryIds.filter((c) => c !== id)
+    : [...categoryIds, id];
+}
+
+// Filtry z URL mogą wskazywać kategorie, których już nie ma (stary link,
+// usunięta kategoria) albo kategorie drugiego typu. Takie id pomijamy, inaczej
+// lista byłaby zawsze pusta, a znaczek na „Filtry” liczyłby niewidoczne pozycje.
+export function sanitizeFilters(
+  filters: HistoryFilters,
+  categoryById: Map<string, Category>
+): HistoryFilters {
+  const categoryIds = filters.categoryIds.filter((id) => {
+    const category = categoryById.get(id);
+    return category && (!filters.type || category.type === filters.type);
+  });
+  return categoryIds.length === filters.categoryIds.length
+    ? filters
+    : { ...filters, categoryIds };
+}
+
+// Zapis w URL: `?q=kino&typ=wydatek&stale=1&cat=id1,id2&sort=amount_desc`.
+// Wartości domyślne nie trafiają do URL; nieznane wartości są pomijane.
+export function filtersFromParams(params: URLSearchParams): HistoryFilters {
+  const typ = params.get("typ");
+  const sort = params.get("sort");
+  const categoryIds = (params.get("cat") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return {
+    type: TYPE_ITEMS.find((item) => item.value === typ)?.value ?? null,
+    recurring: params.get("stale") === "1",
+    categoryIds: [...new Set(categoryIds)],
+    query: params.get("q") ?? "",
+    sort: SORT_OPTIONS.find((opt) => opt.value === sort)?.value ?? null,
+  };
+}
+
+export function writeFilterParams(filters: HistoryFilters, params: URLSearchParams) {
+  if (filters.query !== "") params.set("q", filters.query);
+  if (filters.type) params.set("typ", filters.type);
+  if (filters.recurring) params.set("stale", "1");
+  if (filters.categoryIds.length > 0) params.set("cat", filters.categoryIds.join(","));
+  if (filters.sort) params.set("sort", filters.sort);
 }

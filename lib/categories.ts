@@ -13,8 +13,10 @@ export const DEFAULT_CATEGORIES: CategoryRef[] = [
   { name: "Inne przychody", type: "przychod" },
 ];
 
+const normalizeName = (name: string) => name.trim().toLowerCase();
+
 export const sameCategory = (a: CategoryRef, b: CategoryRef) =>
-  a.type === b.type && a.name.trim().toLowerCase() === b.name.toLowerCase();
+  a.type === b.type && normalizeName(a.name) === normalizeName(b.name);
 
 export const defaultValue = (c: CategoryRef) => `default:${c.type}:${c.name}`;
 
@@ -50,4 +52,23 @@ export function buildCategoryOptions(
 export function valueForCategory(category: Category) {
   const preset = DEFAULT_CATEGORIES.find((d) => sameCategory(category, d));
   return preset ? defaultValue(preset) : userValue(category);
+}
+
+// Wyjaśnienie, czemu nie można usunąć kategorii; null, gdy nic jej nie używa.
+export function categoryUsageMessage(usage: {
+  transactions: number;
+  rules: number;
+}): string | null {
+  const { transactions, rules } = usage;
+  if (transactions === 0 && rules === 0) return null;
+
+  const usages = [
+    transactions > 0 && `transakcje (${transactions})`,
+    rules > 0 && `zlecenia stałe (${rules})`,
+  ].filter(Boolean);
+  const hints = [
+    transactions > 0 && "usuń transakcje lub przenieś je do innej kategorii",
+    rules > 0 && "usuń zlecenia lub zmień im kategorię w zakładce „Zlecenia”",
+  ].filter(Boolean);
+  return `Ma przypisane ${usages.join(" i ")}. Najpierw ${hints.join(", a ")}.`;
 }

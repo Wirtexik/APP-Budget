@@ -145,7 +145,7 @@ export function HistoryFilters({
                 {g.categories.map((c) => (
                   <DropdownMenuCheckboxItem
                     key={c.id}
-                    checked={value.categoryIds.includes(String(c.id))}
+                    checked={value.categoryIds.includes(c.id)}
                     onCheckedChange={() =>
                       onChange({
                         ...value,

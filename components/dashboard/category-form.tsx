@@ -29,18 +29,16 @@ import {
   type CategoryType,
   type Id,
 } from "@/lib/budget";
-import { ownCategories } from "@/lib/categories";
-import { getSupabase } from "@/lib/supabase";
+import { categoryUsageMessage, ownCategories } from "@/lib/categories";
+import { useBudgetData } from "@/lib/hooks/budget-data";
+import {
+  countCategoryUsage,
+  deleteCategory,
+  insertCategory,
+} from "@/lib/queries";
 
-export function CategoryForm({
-  userId,
-  categories,
-  onSaved,
-}: {
-  userId: string;
-  categories: Category[];
-  onSaved: () => Promise<void>;
-}) {
+export function CategoryForm() {
+  const { userId, categories, refresh: onSaved } = useBudgetData();
   const [name, setName] = useState("");
   const [type, setType] = useState<CategoryType>("wydatek");
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +60,6 @@ export function CategoryForm({
 
   async function handleRemove(category: Category) {
     setRemovingId(category.id);
-    const supabase = getSupabase();
 
     const blocked = (description: string) =>
       toast.error(`Nie można usunąć kategorii „${category.name}”`, {
@@ -70,65 +67,23 @@ export function CategoryForm({
         duration: 7000,
       });
 
-    // Sprawdzamy z góry, bo przy kluczu obcym z ON DELETE CASCADE baza usunęłaby
-    // kategorię razem z jej transakcjami. Zlecenia stałe blokuje RESTRICT w bazie,
-    // ale bez tego sprawdzenia komunikat nie powiedziałby, co blokuje usunięcie.
-    const [transactionsResult, rulesResult] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("category_id", category.id),
-      supabase
-        .from("recurring_rules")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("category_id", category.id),
-    ]);
-    const countError = transactionsResult.error ?? rulesResult.error;
-    const transactionCount = transactionsResult.count ?? 0;
-    const ruleCount = rulesResult.count ?? 0;
+    const usage = await countCategoryUsage(userId, category.id);
+    const usageMessage = categoryUsageMessage(usage);
 
-    if (countError) {
+    if (usage.error) {
       toast.error("Nie udało się sprawdzić, czy kategoria jest używana", {
-        description: countError.message,
+        description: usage.error,
       });
-    } else if (transactionCount > 0 || ruleCount > 0) {
-      const usages = [
-        transactionCount > 0 && `transakcje (${transactionCount})`,
-        ruleCount > 0 && `zlecenia stałe (${ruleCount})`,
-      ].filter(Boolean);
-      const hints = [
-        transactionCount > 0 &&
-          "usuń transakcje lub przenieś je do innej kategorii",
-        ruleCount > 0 &&
-          "usuń zlecenia lub zmień im kategorię w zakładce „Zlecenia”",
-      ].filter(Boolean);
-      blocked(
-        `Ma przypisane ${usages.join(" i ")}. Najpierw ${hints.join(", a ")}.`
-      );
+    } else if (usageMessage) {
+      blocked(usageMessage);
     } else {
-      const { data, error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", category.id)
-        .eq("user_id", userId)
-        .select("id");
-
-      if (error?.code === "23503") {
-        // Naruszenie klucza obcego – transakcja lub zlecenie pojawiło się w międzyczasie.
+      const { error, inUse } = await deleteCategory(userId, category.id);
+      if (inUse) {
         blocked(
           "Ma przypisane transakcje lub zlecenia stałe. Usuń je lub przenieś do innej kategorii i spróbuj ponownie."
         );
       } else if (error) {
-        toast.error("Nie udało się usunąć kategorii", {
-          description: error.message,
-        });
-      } else if (!data?.length) {
-        // Przy braku uprawnień (RLS) Supabase nie zgłasza błędu, tylko usuwa 0 wierszy.
-        toast.error("Nie usunięto kategorii", {
-          description: "Nie istnieje albo brak uprawnień do usuwania.",
-        });
+        toast.error("Nie udało się usunąć kategorii", { description: error });
       } else {
         toast.success(`Usunięto kategorię „${category.name}”`);
       }
@@ -142,20 +97,12 @@ export function CategoryForm({
     e.preventDefault();
     setError(null);
 
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError("Podaj nazwę kategorii.");
-      return;
-    }
-
     setSaving(true);
-    const { error } = await getSupabase()
-      .from("categories")
-      .insert({ user_id: userId, name: trimmed, type });
+    const failure = await insertCategory(userId, { name, type });
     setSaving(false);
 
-    if (error) {
-      setError(error.message);
+    if (failure) {
+      setError(failure);
       return;
     }
 
@@ -276,9 +223,7 @@ export function CategoryForm({
       <EditCategoryDialog
         key={editKey}
         category={editingCategory}
-        userId={userId}
         onClose={() => setEditingCategory(null)}
-        onSaved={onSaved}
       />
     </Card>
   );

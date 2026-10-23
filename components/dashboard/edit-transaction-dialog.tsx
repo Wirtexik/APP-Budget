@@ -15,32 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  parseAmount,
-  type Category,
-  type CategoryType,
-  type Id,
-  type Transaction,
-} from "@/lib/budget";
-import { valueForCategory } from "@/lib/categories";
-import { resolveCategory, updateTransaction, type Resolved } from "@/lib/queries";
+import type { Transaction } from "@/lib/budget";
+import { useTransactionForm } from "@/lib/hooks/use-transaction-form";
 
 export function EditTransactionDialog({
   open,
   onOpenChange,
   transaction,
-  userId,
-  categories,
-  categoryById,
-  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction: Transaction | null;
-  userId: string;
-  categories: Category[];
-  categoryById: Map<string, Category>;
-  onSaved: (date?: string) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
 
@@ -55,12 +40,8 @@ export function EditTransactionDialog({
         {transaction && (
           <EditTransactionForm
             transaction={transaction}
-            category={categoryById.get(String(transaction.category_id))}
-            userId={userId}
-            categories={categories}
             onSavingChange={setSaving}
             onDone={() => onOpenChange(false)}
-            onSaved={onSaved}
           />
         )}
       </DialogContent>
@@ -72,85 +53,35 @@ export function EditTransactionDialog({
 // więc wydatek zostaje wydatkiem, a przychód przychodem.
 function EditTransactionForm({
   transaction,
-  category,
-  userId,
-  categories,
   onSavingChange,
   onDone,
-  onSaved,
 }: {
   transaction: Transaction;
-  category: Category | undefined;
-  userId: string;
-  categories: Category[];
   onSavingChange: (saving: boolean) => void;
   onDone: () => void;
-  onSaved: (date?: string) => Promise<void>;
 }) {
-  const type: CategoryType = category?.type ?? "wydatek";
+  const {
+    amount,
+    setAmount,
+    date,
+    setDate,
+    description,
+    setDescription,
+    categoryValue,
+    setCategoryValue,
+    type,
+    categories,
+    error,
+    saving,
+    handleSubmit: submit,
+  } = useTransactionForm({ kind: "edit", transaction });
 
-  const [initialCategoryValue] = useState(() =>
-    category ? valueForCategory(category) : null
-  );
-  const [amount, setAmount] = useState(() => String(transaction.amount));
-  const [date, setDate] = useState(() => transaction.date.slice(0, 10));
-  const [categoryValue, setCategoryValue] = useState<string | null>(
-    initialCategoryValue
-  );
-  const [description, setDescription] = useState(
-    () => transaction.description ?? ""
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  function setBusy(busy: boolean) {
-    setSaving(busy);
-    onSavingChange(busy);
-  }
-
+  // Okno nie da się zamknąć w trakcie zapisu.
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-
-    const value = parseAmount(amount);
-    if (value === null) {
-      setError("Podaj kwotę większą od zera.");
-      return;
-    }
-
-    if (!categoryValue) {
-      setError("Wybierz kategorię.");
-      return;
-    }
-
-    setBusy(true);
-
-    // Gdy kategoria nie została zmieniona, zostaje dotychczasowy `category_id`
-    // (nazwa domyślnej kategorii mogłaby wskazywać inny, zdublowany wiersz).
-    const keepCategory =
-      categoryValue === initialCategoryValue && transaction.category_id != null;
-    const resolved: Resolved = keepCategory
-      ? { id: transaction.category_id, error: null }
-      : await resolveCategory(userId, categories, categoryValue);
-
-    const failure =
-      resolved.error ??
-      (await updateTransaction(userId, transaction.id, {
-        amount: value,
-        date,
-        description,
-        categoryId: resolved.id as Id,
-      }));
-
-    if (failure) {
-      setBusy(false);
-      setError(failure);
-      return;
-    }
-
-    await onSaved(date);
-    setBusy(false);
-    onDone();
+    onSavingChange(true);
+    const saved = await submit(e);
+    onSavingChange(false);
+    if (saved) onDone();
   }
 
   return (

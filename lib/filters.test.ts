@@ -4,13 +4,16 @@ import {
   EMPTY_FILTERS,
   categoryGroups,
   filterTransactions,
+  filtersFromParams,
   hasActiveFilters,
   matchesQuery,
   menuFilterCount,
   normalizeText,
+  sanitizeFilters,
   sortTransactions,
   toggleCategory,
   withType,
+  writeFilterParams,
 } from "@/lib/filters";
 
 const categories: Category[] = [
@@ -18,7 +21,7 @@ const categories: Category[] = [
   { id: "food", name: "Jedzenie", type: "wydatek" },
   { id: "pay", name: "Wynagrodzenie", type: "przychod" },
 ];
-const categoryById = new Map(categories.map((c) => [String(c.id), c]));
+const categoryById = new Map(categories.map((c) => [c.id, c]));
 
 const tx = (
   id: string,
@@ -188,5 +191,50 @@ describe("withType / toggleCategory / liczniki", () => {
     expect(hasActiveFilters({ ...EMPTY_FILTERS, query: "  " })).toBe(false);
     expect(hasActiveFilters({ ...EMPTY_FILTERS, query: "a" })).toBe(true);
     expect(hasActiveFilters({ ...EMPTY_FILTERS, sort: "date_asc" })).toBe(true);
+  });
+});
+
+describe("sanitizeFilters", () => {
+  it("pomija nieistniejące kategorie i kategorie drugiego typu", () => {
+    const f = { ...EMPTY_FILTERS, type: "wydatek" as const, categoryIds: ["fun", "pay", "gone"] };
+    expect(sanitizeFilters(f, categoryById).categoryIds).toEqual(["fun"]);
+  });
+
+  it("bez zmian zwraca ten sam obiekt", () => {
+    const f = { ...EMPTY_FILTERS, categoryIds: ["fun", "pay"] };
+    expect(sanitizeFilters(f, categoryById)).toBe(f);
+  });
+});
+
+describe("filtry w URL", () => {
+  const roundTrip = (f: typeof EMPTY_FILTERS) => {
+    const params = new URLSearchParams();
+    writeFilterParams(f, params);
+    return { search: params.toString(), back: filtersFromParams(params) };
+  };
+
+  it("puste filtry nie zostawiają parametrów", () => {
+    expect(roundTrip(EMPTY_FILTERS)).toEqual({ search: "", back: EMPTY_FILTERS });
+  });
+
+  it("zapis i odczyt dają te same filtry", () => {
+    const f = {
+      type: "wydatek" as const,
+      recurring: true,
+      categoryIds: ["fun", "food"],
+      query: "żabka ",
+      sort: "amount_desc" as const,
+    };
+    const { search, back } = roundTrip(f);
+    expect(search).toBe("q=%C5%BCabka+&typ=wydatek&stale=1&cat=fun%2Cfood&sort=amount_desc");
+    expect(back).toEqual(f);
+  });
+
+  it("pomija nieznane wartości i powtórzone kategorie", () => {
+    const params = new URLSearchParams("typ=inne&stale=tak&sort=zle&cat=fun,,fun, food");
+    expect(filtersFromParams(params)).toEqual({
+      ...EMPTY_FILTERS,
+      categoryIds: ["fun", "food"],
+    });
   });
 });

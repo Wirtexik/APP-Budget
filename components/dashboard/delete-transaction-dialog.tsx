@@ -13,20 +13,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { currency, formatDate, type Transaction } from "@/lib/budget";
-import { getSupabase } from "@/lib/supabase";
+import { useBudgetData } from "@/lib/hooks/budget-data";
+import { deleteTransaction } from "@/lib/queries";
 
 // Okno potwierdzenia usunięcia. `transaction === null` oznacza „zamknięte”.
 export function DeleteTransactionDialog({
   transaction,
-  userId,
   onClose,
-  onDeleted,
 }: {
   transaction: Transaction | null;
-  userId: string;
   onClose: () => void;
-  onDeleted: () => Promise<void>;
 }) {
+  const { userId, refresh } = useBudgetData();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,30 +38,14 @@ export function DeleteTransactionDialog({
     setDeleting(true);
     setError(null);
 
-    const { data, error: dbError } = await getSupabase()
-      .from("transactions")
-      .delete()
-      .eq("id", transaction.id)
-      .eq("user_id", userId)
-      .select("id");
-
-    if (dbError) {
-      setDeleting(false);
-      setError(dbError.message);
-      return;
-    }
-
-    // Supabase przy braku uprawnień (RLS) nie zwraca błędu, tylko 0 usuniętych wierszy.
-    const removed = (data?.length ?? 0) > 0;
-    await onDeleted();
+    const failure = await deleteTransaction(userId, transaction.id);
+    await refresh();
     setDeleting(false);
 
-    if (removed) {
-      close();
+    if (failure) {
+      setError(failure);
     } else {
-      setError(
-        "Nie usunięto wpisu – nie istnieje albo brak uprawnień do usuwania."
-      );
+      close();
     }
   }
 

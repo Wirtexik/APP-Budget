@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Calendar,
   CalendarRange,
@@ -26,13 +26,17 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  categoryOf,
   currency,
   formatDate,
+  fromGrosze,
+  toGrosze,
   type Category,
   type CategoryType,
+  type Id,
   type Transaction,
 } from "@/lib/budget";
-import { fetchYearlyTransactions } from "@/lib/queries";
+import { useBudgetData, useYearlyData } from "@/lib/hooks/budget-data";
 
 const EXPENSE_COLORS = [
   "#f97316",
@@ -75,20 +79,20 @@ function groupTransactions(
   categories: Category[],
   transactions: Transaction[]
 ): Record<CategoryType, TypeGroup> {
-  const byId = new Map(categories.map((c) => [String(c.id), c]));
-  const groups = new Map<string, CategoryGroup>();
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const groups = new Map<Id, CategoryGroup>();
 
   for (const t of transactions) {
-    const category = byId.get(String(t.category_id));
+    const category = categoryOf(t, byId);
     if (!category) continue;
 
-    const key = String(category.id);
-    let group = groups.get(key);
+    let group = groups.get(category.id);
     if (!group) {
       group = { category, total: 0, color: "", transactions: [] };
-      groups.set(key, group);
+      groups.set(category.id, group);
     }
-    group.total += Number(t.amount);
+    // Do czasu `build` suma jest w groszach (bez błędów zmiennoprzecinkowych).
+    group.total += toGrosze(t.amount);
     group.transactions.push(t);
   }
 
@@ -96,10 +100,12 @@ function groupTransactions(
     const list = [...groups.values()]
       .filter((g) => g.category.type === type)
       .sort((a, b) => b.total - a.total);
+    const total = list.reduce((sum, g) => sum + g.total, 0);
     list.forEach((g, i) => {
       g.color = colors[i % colors.length];
+      g.total = fromGrosze(g.total);
     });
-    return { total: list.reduce((sum, g) => sum + g.total, 0), groups: list };
+    return { total: fromGrosze(total), groups: list };
   };
 
   return {
@@ -130,57 +136,26 @@ const TYPE_SECTIONS: {
 
 type Granularity = "miesiac" | "rok";
 
-export function ReportsTab({
-  userId,
-  categories,
-  transactions,
-  monthLabel,
-  currentYear,
-  loading,
-}: {
-  userId: string;
-  categories: Category[];
-  transactions: Transaction[];
-  monthLabel: string;
-  /** Rok aktualnie wybrany w globalnym filtrze u góry strony. */
-  currentYear: number;
-  loading: boolean;
-}) {
+export function ReportsTab() {
+  const {
+    categories,
+    categoryById,
+    monthTransactions: transactions,
+    monthLabel,
+    loading,
+  } = useBudgetData();
+  // Dane roku z globalnego filtra u góry strony, pobierane w tle (niezależnie od
+  // suwaka), żeby przełączenie na „Rok” było natychmiastowe.
+  const {
+    year: currentYear,
+    transactions: yearTransactions,
+    loading: yearLoading,
+    error: yearError,
+  } = useYearlyData();
+
   // Suwak „Miesiąc / Rok” – przełącza zakres danych dla wykresu, legendy
   // i akordeonu poniżej, niezależnie od globalnego wyboru miesiąca w nagłówku.
   const [granularity, setGranularity] = useState<Granularity>("miesiac");
-
-  // Dane całego roku pobierane w tle (niezależnie od suwaka), żeby przełączenie
-  // na „Rok” było natychmiastowe, bez migotania stanu ładowania.
-  const [yearTransactions, setYearTransactions] = useState<Transaction[]>([]);
-  const [yearLoading, setYearLoading] = useState(true);
-  const [yearError, setYearError] = useState<string | null>(null);
-
-  // Zmiana globalnego roku czyści stare dane roku bez efektu – dopasowanie stanu
-  // podczas renderu (react.dev/learn/you-might-not-need-an-effect), inaczej przez
-  // chwilę widać by było liczby z poprzedniego roku pod nową etykietą.
-  const [syncedYear, setSyncedYear] = useState(currentYear);
-  if (currentYear !== syncedYear) {
-    setSyncedYear(currentYear);
-    setYearLoading(true);
-    setYearTransactions([]);
-  }
-
-  const yearRequestSeq = useRef(0);
-  useEffect(() => {
-    const id = ++yearRequestSeq.current;
-    fetchYearlyTransactions(userId, currentYear).then((data) => {
-      if (id !== yearRequestSeq.current) return;
-      setYearError(data.error);
-      setYearTransactions(data.transactions);
-      setYearLoading(false);
-    });
-  }, [userId, currentYear]);
-
-  const categoryById = useMemo(
-    () => new Map(categories.map((c) => [String(c.id), c])),
-    [categories]
-  );
 
   const isYear = granularity === "rok";
   const activeTransactions = isYear ? yearTransactions : transactions;
@@ -249,7 +224,7 @@ export function ReportsTab({
                 <ul className="flex w-full max-h-56 flex-col gap-2 overflow-y-auto pr-2 md:max-w-sm">
                   {expenses.groups.map((g) => (
                     <li
-                      key={String(g.category.id)}
+                      key={g.category.id}
                       className="flex items-center justify-between gap-3 text-sm"
                     >
                       <span className="flex min-w-0 items-center gap-2">
@@ -320,7 +295,7 @@ export function ReportsTab({
                         >
                           {section.groups.map((g) => (
                             <AccordionItem
-                              key={String(g.category.id)}
+                              key={g.category.id}
                               value={`${type}:${g.category.id}`}
                             >
                               <AccordionTrigger className="items-center hover:no-underline">
@@ -346,7 +321,7 @@ export function ReportsTab({
                                 <ul className="divide-y rounded-lg bg-muted/40 px-3">
                                   {g.transactions.map((t) => (
                                     <li
-                                      key={String(t.id)}
+                                      key={t.id}
                                       className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-2"
                                     >
                                       <span className="whitespace-nowrap text-xs text-muted-foreground">

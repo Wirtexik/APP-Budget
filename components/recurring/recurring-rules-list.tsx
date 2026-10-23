@@ -2,7 +2,7 @@
 
 import { Pause, Pencil, Play, Trash2 } from "lucide-react";
 
-import { SignedAmount } from "@/components/recurring/signed-amount";
+import { SignedAmount } from "@/components/shared/signed-amount";
 import { Button } from "@/components/ui/button";
 import { formatDate, type Category, type Id } from "@/lib/budget";
 import {
@@ -53,7 +53,7 @@ export function RecurringRulesList({
   return (
     <ul className="flex flex-col divide-y">
       {rules.map((rule) => {
-        const category = categoryById.get(String(rule.category_id));
+        const category = categoryById.get(rule.category_id);
         const status = ruleStatus(rule);
         const busy = busyId === rule.id;
 

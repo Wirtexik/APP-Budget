@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { CalendarClock, Plus, Repeat } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,59 +17,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { pluralEntries, type Category, type Id } from "@/lib/budget";
-import {
-  addDays,
-  todayKey,
-  type RecurringRule,
-  type UpcomingOccurrence,
-} from "@/lib/recurring";
-import {
-  fetchRecurringRules,
-  fetchUpcoming,
-  materializeRecurring,
-  setRecurringRuleActive,
-} from "@/lib/recurring-queries";
-
-/** Ile dni do przodu pokazuje sekcja „Nadchodzące”. */
-export const UPCOMING_DAYS = 30;
-
-interface RecurringView {
-  error: string | null;
-  rules: RecurringRule[];
-  upcoming: UpcomingOccurrence[];
-}
-
-async function fetchRecurringView(userId: string): Promise<RecurringView> {
-  const [rules, upcoming] = await Promise.all([
-    fetchRecurringRules(userId),
-    fetchUpcoming(addDays(todayKey(), UPCOMING_DAYS)),
-  ]);
-  return {
-    error: rules.error ?? upcoming.error,
-    rules: rules.rules,
-    upcoming: upcoming.occurrences,
-  };
-}
+import type { Id } from "@/lib/budget";
+import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
+import { UPCOMING_DAYS, type RecurringRule } from "@/lib/recurring";
+import { setRecurringRuleActive } from "@/lib/recurring-queries";
 
 // Zakładka „Zlecenia”: lista zleceń, nadchodzące wykonania, dialogi dodawania,
-// edycji i usuwania. Po każdej zmianie tworzy zaległe transakcje
-// (`materializeRecurring`) i prosi dashboard o odświeżenie danych miesiąca.
-export function RecurringTab({
-  userId,
-  categories,
-  categoryById,
-  onTransactionsChanged,
-}: {
-  userId: string;
-  categories: Category[];
-  categoryById: Map<string, Category>;
-  onTransactionsChanged: () => Promise<void>;
-}) {
-  const [rules, setRules] = useState<RecurringRule[]>([]);
-  const [upcoming, setUpcoming] = useState<UpcomingOccurrence[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+// edycji i usuwania. Dane i odświeżanie po zmianach: useRecurringData.
+export function RecurringTab() {
+  const { userId, categoryById } = useBudgetData();
+  const {
+    rules,
+    upcoming,
+    loading,
+    error: loadError,
+    afterChange,
+  } = useRecurringData();
 
   // Zlecenie, na którym trwa wstrzymanie / wznowienie (blokuje jego przyciski).
   const [busyId, setBusyId] = useState<Id | null>(null);
@@ -79,46 +42,6 @@ export function RecurringTab({
   const [editing, setEditing] = useState<RecurringRule | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
-
-  const requestSeq = useRef(0);
-
-  const apply = useCallback((data: RecurringView) => {
-    if (data.error) {
-      setLoadError(data.error);
-    } else {
-      setLoadError(null);
-      setRules(data.rules);
-      setUpcoming(data.upcoming);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    const id = ++requestSeq.current;
-    fetchRecurringView(userId).then((data) => {
-      if (id === requestSeq.current) apply(data);
-    });
-  }, [userId, apply]);
-
-  // Po zmianie zlecenia: utwórz należne transakcje (np. zlecenie startujące dziś),
-  // a potem odśwież zakładkę i dane miesiąca.
-  const afterChange = useCallback(async () => {
-    const { error, created } = await materializeRecurring();
-    if (error) {
-      toast.error("Nie udało się wykonać zleceń stałych", { description: error });
-    } else if (created > 0) {
-      toast.success(
-        `Dodano ${created} ${pluralEntries(created)} ze zleceń stałych`
-      );
-    }
-
-    const id = ++requestSeq.current;
-    const [data] = await Promise.all([
-      fetchRecurringView(userId),
-      onTransactionsChanged(),
-    ]);
-    if (id === requestSeq.current) apply(data);
-  }, [userId, apply, onTransactionsChanged]);
 
   function openForm(rule: RecurringRule | null) {
     setEditing(rule);
@@ -203,18 +126,11 @@ export function RecurringTab({
         open={formOpen}
         onOpenChange={setFormOpen}
         rule={editing}
-        userId={userId}
-        categories={categories}
-        categoryById={categoryById}
-        onSaved={afterChange}
       />
 
       <DeleteRecurringDialog
         rule={pendingDelete}
-        userId={userId}
-        categoryById={categoryById}
         onClose={() => setPendingDelete(null)}
-        onDeleted={afterChange}
       />
     </div>
   );

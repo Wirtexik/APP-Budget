@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Repeat } from "lucide-react";
 
-import { SignedAmount } from "@/components/recurring/signed-amount";
+import { SignedAmount } from "@/components/shared/signed-amount";
 import { formatDate, type Category } from "@/lib/budget";
 import {
   addDays,
@@ -61,7 +61,7 @@ export function UpcomingList({
           </h3>
           <ul className="flex flex-col gap-1.5">
             {items.map((o) => {
-              const category = categoryById.get(String(o.category_id));
+              const category = categoryById.get(o.category_id);
               return (
                 <li
                   key={`${o.rule_id}-${o.occurs_on}`}
