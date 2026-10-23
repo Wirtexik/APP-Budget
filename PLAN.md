@@ -9,7 +9,7 @@ Plan powstał na podstawie ARCHITECTURE.md i package.json. Lista błędów w eta
 | 0 | Audyt błędów i higiena repo | Częściowo: dodano Vitest, reszta do sprawdzenia. |
 | 1 | Wydzielenie warstwy danych z `Dashboard` | Do zrobienia. |
 | 2 | Filtrowanie transakcji | Do zrobienia (jest tylko przełącznik Uznania/Obciążenia w Historii). |
-| 3 | Zlecenia stałe | **Zrobione** (baza, logika, interfejs). Do dopracowania: `pg_cron`, patrz etap 3. |
+| 3 | Zlecenia stałe | **Zrobione** (baza, logika, interfejs, `pg_cron`). Układ na telefon przechodzi do etapu 4. |
 | 4 | Interfejs mobilny | Do zrobienia. |
 | 5 | Dopracowanie interfejsu | Do zrobienia. |
 
@@ -47,14 +47,11 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 - Interfejs: zakładka „Zlecenia” w `components/recurring/` (lista, formularz dodawania i edycji, wstrzymanie i wznowienie, usuwanie, „Nadchodzące” na 30 dni).
 - Wykonywanie: `materializeRecurring()` przy otwarciu aplikacji, przed pierwszym pobraniem danych, oraz po każdej zmianie zlecenia.
 - Wykonane transakcje oznaczone ikoną zlecenia w tabelach.
+- `pg_cron` raz dziennie o 23:05 UTC: migracja `supabase/migrations/20261023120000_recurring_cron.sql`. Wywołanie przy otwarciu aplikacji zostaje jako zabezpieczenie.
+- Usuwanie kategorii: `CategoryForm` sprawdza transakcje i zlecenia, a komunikat mówi, co blokuje usunięcie.
+- Uprawnienia `GRANT` do `recurring_rules` (wymóg Supabase od 30.10.2026).
 
-**Otwarte:**
-
-- `pg_cron` raz dziennie, o ile plan Supabase to udostępnia. Dziś transakcje pojawiają się dopiero po otwarciu aplikacji.
-- Zlecenia nie mają jeszcze układu dla telefonu poza responsywnym wyglądem kart (etap 4). Cztery zakładki w nagłówku mogą się tam ściskać.
-
-Wywołanie materializeRecurring() przy pierwszym ładowaniu w dashboard.tsx, zgodnie z Twoją decyzją.
-Usuwanie kategorii: baza zablokuje teraz usunięcie kategorii użytej w zleceniu. Komponent usuwający kategorie prawdopodobnie sprawdza tylko transakcje, więc trzeba go przejrzeć.
+**Przeniesione do etapu 4:** układ zleceń na telefon. Cztery zakładki w nagłówku mogą się tam ściskać.
 
 ## Etap 4: PC i mobile
 
@@ -74,7 +71,7 @@ Spójne stany ładowania (szkielety), puste stany, komunikaty błędów, dostęp
 
 ## Decyzje do podjęcia
 
-1. **Wykonywanie zleceń:** rozstrzygnięte na razie na korzyść nadrabiania przy otwarciu aplikacji. Czy dodatkowo włączyć `pg_cron`?
+1. ~~Wykonywanie zleceń~~ Rozstrzygnięte: nadrabianie przy otwarciu aplikacji + `pg_cron` raz dziennie.
 2. **Wykrywanie urządzenia:** User-Agent z przełącznikiem ręcznym (propozycja), czy wybór tylko po szerokości ekranu? Przy samej szerokości nie da się zrobić całkowicie osobnego kodu po stronie serwera.
 3. **Co dalej:** dokończyć etap 0 (audyt błędów), czy od razu etap 1 (wydzielenie warstwy danych)?
 4. ~~Testy~~ Vitest jest dodany. Czy rozszerzyć go o `lib/budget.ts`?

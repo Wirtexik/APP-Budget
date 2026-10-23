@@ -64,28 +64,49 @@ export function CategoryForm({
     setRemovingId(category.id);
     const supabase = getSupabase();
 
-    const blocked = (count?: number) =>
+    const blocked = (description: string) =>
       toast.error(`Nie można usunąć kategorii „${category.name}”`, {
-        description: `Ma przypisane transakcje${
-          count ? ` (${count})` : ""
-        }. Usuń je lub przenieś do innej kategorii i spróbuj ponownie.`,
+        description,
         duration: 7000,
       });
 
     // Sprawdzamy z góry, bo przy kluczu obcym z ON DELETE CASCADE baza usunęłaby
-    // kategorię razem z jej transakcjami.
-    const { count, error: countError } = await supabase
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("category_id", category.id);
+    // kategorię razem z jej transakcjami. Zlecenia stałe blokuje RESTRICT w bazie,
+    // ale bez tego sprawdzenia komunikat nie powiedziałby, co blokuje usunięcie.
+    const [transactionsResult, rulesResult] = await Promise.all([
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("category_id", category.id),
+      supabase
+        .from("recurring_rules")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("category_id", category.id),
+    ]);
+    const countError = transactionsResult.error ?? rulesResult.error;
+    const transactionCount = transactionsResult.count ?? 0;
+    const ruleCount = rulesResult.count ?? 0;
 
     if (countError) {
-      toast.error("Nie udało się sprawdzić transakcji kategorii", {
+      toast.error("Nie udało się sprawdzić, czy kategoria jest używana", {
         description: countError.message,
       });
-    } else if ((count ?? 0) > 0) {
-      blocked(count ?? undefined);
+    } else if (transactionCount > 0 || ruleCount > 0) {
+      const usages = [
+        transactionCount > 0 && `transakcje (${transactionCount})`,
+        ruleCount > 0 && `zlecenia stałe (${ruleCount})`,
+      ].filter(Boolean);
+      const hints = [
+        transactionCount > 0 &&
+          "usuń transakcje lub przenieś je do innej kategorii",
+        ruleCount > 0 &&
+          "usuń zlecenia lub zmień im kategorię w zakładce „Zlecenia”",
+      ].filter(Boolean);
+      blocked(
+        `Ma przypisane ${usages.join(" i ")}. Najpierw ${hints.join(", a ")}.`
+      );
     } else {
       const { data, error } = await supabase
         .from("categories")
@@ -95,8 +116,10 @@ export function CategoryForm({
         .select("id");
 
       if (error?.code === "23503") {
-        // Naruszenie klucza obcego – transakcja pojawiła się w międzyczasie.
-        blocked();
+        // Naruszenie klucza obcego – transakcja lub zlecenie pojawiło się w międzyczasie.
+        blocked(
+          "Ma przypisane transakcje lub zlecenia stałe. Usuń je lub przenieś do innej kategorii i spróbuj ponownie."
+        );
       } else if (error) {
         toast.error("Nie udało się usunąć kategorii", {
           description: error.message,

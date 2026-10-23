@@ -23,7 +23,7 @@ Wszystkie `id` to `uuid` (`gen_random_uuid()`). `user_id` w `categories` i `tran
 **`recurring_rules`** (zlecenia stałe, migracja [`supabase/migrations/20261018120000_recurring_rules.sql`](supabase/migrations/20261018120000_recurring_rules.sql)) – `category_id` (`RESTRICT`), `amount`, `description`, `frequency` (`daily`/`weekly`/`monthly`/`yearly`) × `interval_count`, `start_date`, `end_date`, `max_occurrences`, `is_active`. Kolumny `run_index`, `occurrences_count`, `next_run_date` są wewnętrzne: trigger nadpisuje to, co wyśle klient, a zmienia je tylko `materialize_recurring()`.
 
 - N-ty termin = `start_date + N × okres` (31. dzień → ostatni dzień krótszego miesiąca, bez dryfu).
-- Transakcje tworzy RPC `materialize_recurring()` (idempotentne, nadrabia zaległe terminy, „dziś” liczone w `Europe/Warsaw`). Podgląd przyszłych terminów: RPC `upcoming_recurring(p_until)`.
+- Transakcje tworzy RPC `materialize_recurring()` (idempotentne, nadrabia zaległe terminy, „dziś” liczone w `Europe/Warsaw`). Wywołuje je aplikacja przy otwarciu oraz `pg_cron` raz dziennie o 23:05 UTC (migracja [`supabase/migrations/20261023120000_recurring_cron.sql`](supabase/migrations/20261023120000_recurring_cron.sql); działa jako `postgres`, więc obejmuje wszystkich użytkowników). Podgląd przyszłych terminów: RPC `upcoming_recurring(p_until)`.
 - Wstrzymanie i zmiana harmonogramu nie nadrabiają przeszłości. Nowe zlecenie z datą startu w przeszłości nadrabia w bazie, ale aplikacja na to nie pozwala (`validateRuleInput` blokuje start i koniec w przeszłości; przy edycji niezmieniona data startu może być przeszła).
 
 Zasady, na których opiera się cała aplikacja:
@@ -31,9 +31,10 @@ Zasady, na których opiera się cała aplikacja:
 - **Kwota jest zawsze dodatnia.** Czy wpis to przychód czy wydatek, wynika wyłącznie z `categories.type`. Zmiana typu kategorii przeklasyfikowuje więc wszystkie jej dotychczasowe transakcje (dialog edycji kategorii ostrzega o tym).
 - **`created_at` jest wymagane** – służy jako drugie kryterium sortowania przy tej samej dacie (`date desc, created_at desc, id desc`).
 - **RLS włączone na wszystkich tabelach**, polityka `for all` z warunkiem `auth.uid() = user_id`. To RLS jest prawdziwym zabezpieczeniem danych; klucz `anon` jest publiczny z założenia. Brak polityki `UPDATE`/`DELETE` nie zwraca błędu, tylko 0 wierszy – kod to wykrywa i pokazuje komunikat.
+- **Każda nowa tabela musi mieć jawne `GRANT`.** Od 30.10.2026 Supabase nie daje nowym tabelom w `public` domyślnego dostępu przez Data API – bez uprawnień aplikacja dostaje `permission denied`. Migracja tworząca tabelę kończy się więc poleceniem `grant select, insert, update, delete on table public.<tabela> to anon, authenticated, service_role;` (wzór: migracja `recurring_rules`). `GRANT` otwiera tylko dostęp do tabeli; to, które wiersze są widoczne, nadal ustala RLS, więc tabela potrzebuje obu.
 - **Autoryzacja:** użytkownik wpisuje sam login, a aplikacja loguje go przez `signInWithPassword` jako `login@budzet.local` (`lib/auth.ts`). Konta trzeba tworzyć w Supabase (Auth → Users) z takim adresem i opcją *Auto Confirm User*.
 - **Kategorie domyślne** (`DEFAULT_CATEGORIES` w `lib/categories.ts`) istnieją tylko w kodzie. Wiersz w bazie powstaje dopiero przy pierwszym użyciu (`ensureCategory` w `lib/queries.ts`). Kategorie z bazy pasujące nazwą i typem do domyślnych nie są „własne” – nie da się ich usunąć ani edytować.
-- Kategorii z transakcjami nie da się usunąć (sprawdzenie w aplikacji + `RESTRICT` w bazie).
+- Kategorii z transakcjami lub zleceniami stałymi nie da się usunąć (sprawdzenie obu w `CategoryForm` + `RESTRICT` w bazie). Komunikat mówi, co blokuje usunięcie.
 
 ## Funkcje
 

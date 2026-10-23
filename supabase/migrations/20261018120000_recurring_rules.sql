@@ -17,7 +17,7 @@
 --   * Nowe zlecenie z datą startu w przeszłości nadrabia zaległe terminy
 --     (interfejs może tego zabronić, baza na to pozwala).
 --   * Transakcje tworzy public.materialize_recurring() – aplikacja woła ją przy
---     otwarciu; opcjonalnie pg_cron (na końcu pliku).
+--     otwarciu, a pg_cron raz dziennie (migracja 20261023120000_recurring_cron.sql).
 --   * Unikalny indeks (recurring_rule_id, date) gwarantuje, że to samo wykonanie
 --     nie powstanie dwa razy (np. dwie karty przeglądarki naraz).
 --
@@ -331,15 +331,16 @@ revoke execute on function public.upcoming_recurring(date) from public, anon;
 grant  execute on function public.materialize_recurring()  to authenticated;
 grant  execute on function public.upcoming_recurring(date) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Uprawnienia do tabeli (Data API)
+-- ---------------------------------------------------------------------------
+
+-- Od 30.10.2026 Supabase nie nadaje nowym tabelom w schemacie public domyślnego
+-- dostępu przez Data API. Bez tych GRANT-ów aplikacja dostanie "permission denied".
+-- Dostęp do wierszy nadal ogranicza RLS (polityka tylko dla authenticated).
+grant select, insert, update, delete on table public.recurring_rules to anon, authenticated, service_role;
+
 commit;
 
--- ---------------------------------------------------------------------------
--- Opcjonalnie: automatyczne wykonywanie bez otwierania aplikacji (pg_cron).
--- Włącz rozszerzenie: Database -> Extensions -> pg_cron, potem uruchom osobno.
--- Co godzinę, bo cron działa w UTC, a funkcja jest idempotentna.
--- ---------------------------------------------------------------------------
--- select cron.schedule(
---   'materialize-recurring',
---   '5 * * * *',
---   $$select public.materialize_recurring()$$
--- );
+-- Automatyczne wykonywanie bez otwierania aplikacji (pg_cron):
+-- osobna migracja 20261023120000_recurring_cron.sql.
