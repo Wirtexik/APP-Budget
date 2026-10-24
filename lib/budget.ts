@@ -167,6 +167,14 @@ export const YEAR_ITEMS = Array.from({ length: 7 }, (_, i) => {
   return { value: String(year), label: String(year) };
 });
 
+// Okres przesunięty o `delta` miesięcy (przez granicę roku). `null`, gdy wynik
+// wypada poza zakres lat selektora – strzałka w nagłówku wtedy gaśnie.
+export function shiftPeriod({ year, month }: Period, delta: number): Period | null {
+  const index = year * 12 + month + delta;
+  const next = { year: Math.floor(index / 12), month: ((index % 12) + 12) % 12 };
+  return YEAR_ITEMS.some((item) => item.value === String(next.year)) ? next : null;
+}
+
 export const TYPE_ITEMS: { value: CategoryType; label: string }[] = [
   { value: "wydatek", label: "Wydatek" },
   { value: "przychod", label: "Przychód" },

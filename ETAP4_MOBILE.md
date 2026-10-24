@@ -89,20 +89,22 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 
 ### Faza G: powłoka mobilna (nagłówek, nawigacja, okres)
 
-- [ ] `lib/budget.ts`: `shiftPeriod(period, ±1)` z granicami `YEAR_ITEMS` (strzałka gaśnie na końcu zakresu), z testami.
-- [ ] `MobileHeader`: „‹ miesiąc rok ›”, awatar otwierający „Więcej”, tytuł widoku. Panel okresu (`Drawer`): siatka 12 miesięcy, rok, „Bieżący miesiąc”.
-- [ ] `BottomNav` wg grafiki: pięć pozycji, aktywna wg `url.view`, wystający „+” z poświatą, `pb-[env(safe-area-inset-bottom)]`, przyciski min. 44×44 px.
-- [ ] Przełączanie widoków przez `url.setView` (jak zakładki na PC: `pushState`). Ukryte widoki montowane od pierwszej wizyty (ta sama zasada co `visited` w `Dashboard`).
-- [ ] Obsługa `loadError` (pasek błędu z „Spróbuj ponownie”) i `loading` na poziomie powłoki.
-- [ ] `lib/dashboard-url.ts`: parametry `formularz` i `ekran` (parsowanie, zapis, wartości błędne → brak), z testami.
+- [x] `lib/budget.ts`: `shiftPeriod(period, ±1)` z granicami `YEAR_ITEMS` (strzałka gaśnie na końcu zakresu), z testami.
+- [x] `MobileHeader`: „‹ miesiąc rok ›”, awatar otwierający „Więcej”, tytuł widoku. Panel okresu (`Drawer`): siatka 12 miesięcy, rok, „Bieżący miesiąc”.
+- [x] `BottomNav` wg grafiki: pięć pozycji, aktywna wg `url.view`, wystający „+” z poświatą, `pb-[env(safe-area-inset-bottom)]`, przyciski min. 44×44 px.
+- [x] Przełączanie widoków przez `url.setView` (jak zakładki na PC: `pushState`). Ukryte widoki montowane od pierwszej wizyty (ta sama zasada co `visited` w `Dashboard`).
+- [x] Obsługa `loadError` (pasek błędu z „Spróbuj ponownie”) i `loading` na poziomie powłoki.
+- [x] `lib/dashboard-url.ts`: parametry `formularz` i `ekran` (parsowanie, zapis, wartości błędne → brak), z testami.
+  Ustalone wartości `formularz`: `nowy`, `<uuid>` (transakcja), `zlecenie`, `zlecenie-<uuid>` (zlecenie, faza K); `ekran`: `wiecej`. Otwarcie robi `pushState` ze znacznikiem `{ overlay: true }`, zamknięcie `history.back()` (bez znacznika: `replaceState`). Desktop czyści oba parametry.
 
 ### Faza H: formularz transakcji na pełnym ekranie
 
-- [ ] Sprawdzić `useTransactionForm`: przełącznik typu w trybie `create` wymaga zmiany typu bez gubienia kwoty i daty (kategoria czyszczona przy zmianie typu). Jeśli hook tego nie umie, rozszerzyć go (z zachowaniem formularzy desktopowych).
-- [ ] `lib/amount-input.ts`: czyszczenie wpisywanej kwoty (kropka → przecinek, tylko cyfry i jeden przecinek, najwyżej 2 miejsca), z testami.
-- [ ] `MobileTransactionForm` (`create` i `edit`): przełącznik Wydatek/Przychód, duże pole kwoty (`inputMode="decimal"`, komunikat `AMOUNT_ERROR`), kafelki kategorii z ikonami, data, opis, przycisk zapisu przyklejony nad klawiaturą, w edycji „Usuń transakcję”.
-- [ ] Kafelek „+ Nowa” w kategoriach: mały panel z nazwą, zapis przez `insertCategory`, nowa kategoria od razu zaznaczona.
-- [ ] Otwieranie przez „+” (`?formularz=nowy`) i z listy (`?formularz=<id>`); id spoza pobranego miesiąca → formularz się nie otwiera, parametr znika.
+- [x] Sprawdzić `useTransactionForm`: przełącznik typu w trybie `create` wymaga zmiany typu bez gubienia kwoty i daty (kategoria czyszczona przy zmianie typu). Jeśli hook tego nie umie, rozszerzyć go (z zachowaniem formularzy desktopowych).
+- [x] `lib/amount-input.ts`: czyszczenie wpisywanej kwoty (kropka → przecinek, tylko cyfry i jeden przecinek, najwyżej 2 miejsca), z testami.
+- [x] `MobileTransactionForm` (`create` i `edit`): przełącznik Wydatek/Przychód, duże pole kwoty (`inputMode="decimal"`, komunikat `AMOUNT_ERROR`), kafelki kategorii z ikonami, data, opis, przycisk zapisu przyklejony nad klawiaturą, w edycji „Usuń transakcję”.
+- [x] Kafelek „+ Nowa” w kategoriach: mały panel z nazwą, zapis przez `insertCategory`, nowa kategoria od razu zaznaczona.
+- [x] Otwieranie przez „+” (`?formularz=nowy`) i z listy (`?formularz=<id>`); id spoza pobranego miesiąca → formularz się nie otwiera, parametr znika.
+- **Decyzja (2026-10-24):** przełącznik typu działa także w edycji (`setType` w `useTransactionForm`): zmiana typu czyści kategorię, powrót do pierwotnego typu ją przywraca. Desktop zostaje przy stałym typie – wyrównanie zapisane w PLAN.md, etap 5. „+ Nowa” z nazwą istniejącej kategorii (także domyślnej) tylko ją zaznacza (`existingCategoryValue`). Przycisk zapisu nad klawiaturą iOS: `useKeyboardInset` (`visualViewport`).
 - [ ] **Sprawdzenie na telefonie:** jaka klawiatura się otwiera (iOS i Android); decyzja, czy zostaje systemowa.
 
 ### Faza I: Kokpit i lista transakcji z przesunięciem
@@ -125,7 +127,7 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - [ ] `recurring-rule-dialog.tsx` (479 linii) rozdzielić na hook `useRecurringRuleForm` (stan, walidacja przez `validateRuleInput`, zapis) i pola; dialog desktopowy działa jak dotąd.
 - [ ] `MobileRecurringList`: karta na zlecenie (opis, kategoria z ikoną, kwota, harmonogram, następny termin, status), przełącznik wstrzymania, menu z edycją i usuwaniem (potwierdzenie w `Drawer`).
 - [ ] „Nadchodzące (30 dni)” jako lista pod kartami.
-- [ ] Formularz zlecenia na pełnym ekranie (wartości parametru `formularz` do ustalenia w fazie G) i przycisk „Dodaj zlecenie”.
+- [ ] Formularz zlecenia na pełnym ekranie (`?formularz=zlecenie` / `zlecenie-<uuid>`, ustalone w fazie G) i przycisk „Dodaj zlecenie”.
 
 ### Faza L: Raporty
 

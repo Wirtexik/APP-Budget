@@ -98,10 +98,10 @@ export function CategoryForm() {
     setError(null);
 
     setSaving(true);
-    const failure = await insertCategory(userId, { name, type });
+    const { error: failure } = await insertCategory(userId, { name, type });
     setSaving(false);
 
-    if (failure) {
+    if (failure !== null) {
       setError(failure);
       return;
     }

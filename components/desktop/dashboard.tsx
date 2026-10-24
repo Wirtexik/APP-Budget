@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChartPie,
   Clock,
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { computeTotals, pluralEntries, type Transaction } from "@/lib/budget";
-import { isView, type View } from "@/lib/dashboard-url";
+import { isView } from "@/lib/dashboard-url";
 import {
   filterTransactions,
   hasActiveFilters,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/filters";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import type { DashboardUrl } from "@/lib/hooks/use-dashboard-url";
+import { useVisited } from "@/lib/hooks/use-visited";
 import { getSupabase } from "@/lib/supabase";
 
 const RECENT_LIMIT = 5;
@@ -69,14 +70,16 @@ export function Dashboard({ login, url }: { login: string; url: DashboardUrl }) 
   const [editOpen, setEditOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
 
-  // Ukryte zakładki Base UI domyślnie odmontowuje, a wtedy ginie ich stan
-  // (suwak Miesiąc/Rok w Raportach, niezapisane formularze). Zakładka zostaje
-  // zamontowana dopiero po pierwszym otwarciu, więc dane zleceń i roku nadal
-  // pobierają się leniwie.
-  const [visited, setVisited] = useState<ReadonlySet<View>>(
-    () => new Set([url.view])
-  );
-  if (!visited.has(url.view)) setVisited(new Set(visited).add(url.view));
+  // Ukryte zakładki Base UI domyślnie odmontowuje, a wtedy ginie ich stan;
+  // `keepMounted` dostają tylko zakładki już odwiedzone.
+  const visited = useVisited(url.view);
+
+  // `formularz` i `ekran` należą do wersji mobilnej; tu ich nie obsługujemy,
+  // więc znikają z URL (np. po przełączeniu wersji z otwartym formularzem).
+  const { form, screen, closeOverlay } = url;
+  useEffect(() => {
+    if (form || screen) closeOverlay();
+  }, [form, screen, closeOverlay]);
 
   // Filtry i sortowanie Historii (z URL). Zostają przy zmianie miesiąca.
   const historyFilters = useMemo(

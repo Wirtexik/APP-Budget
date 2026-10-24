@@ -92,17 +92,21 @@ export async function deleteTransaction(userId: string, id: Id) {
   return null;
 }
 
+// Zwraca id nowej kategorii, żeby formularz mógł ją od razu zaznaczyć.
 export async function insertCategory(
   userId: string,
   fields: { name: string; type: CategoryType }
-) {
+): Promise<Resolved> {
   const trimmed = fields.name.trim();
-  if (!trimmed) return "Podaj nazwę kategorii.";
+  if (!trimmed) return { id: null, error: "Podaj nazwę kategorii." };
 
-  const { error } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("categories")
-    .insert({ user_id: userId, name: trimmed, type: fields.type });
-  return error ? errorMessage(error) : null;
+    .insert({ user_id: userId, name: trimmed, type: fields.type })
+    .select("id")
+    .single();
+  if (error) return { id: null, error: errorMessage(error) };
+  return { id: data.id as Id, error: null };
 }
 
 export async function updateCategory(

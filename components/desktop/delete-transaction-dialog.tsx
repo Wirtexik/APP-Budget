@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { currency, formatDate, type Transaction } from "@/lib/budget";
-import { useBudgetData } from "@/lib/hooks/budget-data";
-import { deleteTransaction } from "@/lib/queries";
+import { useDeleteTransaction } from "@/lib/hooks/use-delete-transaction";
 
 // Okno potwierdzenia usunięcia. `transaction === null` oznacza „zamknięte”.
 export function DeleteTransactionDialog({
@@ -24,29 +22,15 @@ export function DeleteTransactionDialog({
   transaction: Transaction | null;
   onClose: () => void;
 }) {
-  const { userId, refresh } = useBudgetData();
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { deleting, error, clearError, confirm: remove } = useDeleteTransaction();
 
   function close() {
-    setError(null);
+    clearError();
     onClose();
   }
 
   async function confirm() {
-    if (!transaction) return;
-    setDeleting(true);
-    setError(null);
-
-    const failure = await deleteTransaction(userId, transaction.id);
-    await refresh();
-    setDeleting(false);
-
-    if (failure) {
-      setError(failure);
-    } else {
-      close();
-    }
+    if (transaction && (await remove(transaction))) close();
   }
 
   return (
