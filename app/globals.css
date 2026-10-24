@@ -39,6 +39,15 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Tylko w wersji mobilnej ([data-ui="mobile"]); na desktopie niezdefiniowane. */
+  --color-income: var(--income);
+  --color-income-foreground: var(--income-foreground);
+  --color-income-strong: var(--income-strong);
+  --color-expense: var(--expense);
+  --color-expense-foreground: var(--expense-foreground);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-glow: var(--glow);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -115,6 +124,89 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Tokeny wersji mobilnej (wzór: design/mobile/styl-kokpit.jpg, paleta z ikona.svg).
+ * Działają tylko pod [data-ui="mobile"] (korzeń MobileApp i popupy Drawer),
+ * więc komponenty ui/ dostają tu nowy wygląd, a desktop zostaje bez zmian.
+ * Paleta: gradient #A855F7 → #6366F1, zieleń #10B981, ciemne tło #0F172A → #1E1B4B.
+ */
+[data-ui="mobile"] {
+  --background: #f3f2f9;
+  --foreground: #1e1b2e;
+  --card: #ffffff;
+  --card-foreground: #1e1b2e;
+  --popover: #ffffff;
+  --popover-foreground: #1e1b2e;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #ece9f7;
+  --secondary-foreground: #2e2a47;
+  --muted: #ece9f7;
+  --muted-foreground: #6b6880;
+  --accent: #ede7fe;
+  --accent-foreground: #5b21b6;
+  --border: #e4e1ef;
+  --input: #dcd8ea;
+  --ring: #a78bfa;
+  --chart-1: #8b5cf6;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #6366f1;
+  --chart-5: #ec4899;
+  --radius: 1.25rem;
+
+  --income: #34d399;
+  --income-foreground: #064e3b;
+  --income-strong: #059669;
+  --expense: #8b5cf6;
+  --expense-foreground: #ffffff;
+  --glass: rgb(255 255 255 / 0.65);
+  --glass-border: rgb(255 255 255 / 0.85);
+  --glow: rgb(139 92 246 / 0.35);
+  --gradient-primary: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  --shadow-soft: 0 12px 32px -16px rgb(76 61 140 / 0.25);
+}
+
+.dark [data-ui="mobile"] {
+  --background: #12122a;
+  --foreground: #eeedf7;
+  --card: #1c1b3a;
+  --card-foreground: #eeedf7;
+  --popover: #1c1b3a;
+  --popover-foreground: #eeedf7;
+  --primary: #a78bfa;
+  --primary-foreground: #160f2e;
+  --secondary: #26244a;
+  --secondary-foreground: #eeedf7;
+  --muted: #26244a;
+  --muted-foreground: #a3a1c2;
+  --accent: #2e2766;
+  --accent-foreground: #ddd6fe;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.14);
+  --ring: #8b5cf6;
+  --chart-1: #a78bfa;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #818cf8;
+  --chart-5: #f472b6;
+
+  --income: #10b981;
+  --income-foreground: #022c22;
+  --income-strong: #047857;
+  --expense: #8b5cf6;
+  --expense-foreground: #ffffff;
+  --glass: rgb(30 27 75 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glow: rgb(168 85 247 / 0.45);
+  --shadow-soft: 0 12px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+/* Tło całego ekranu: granat → indygo, jak w ikonie. */
+.dark [data-ui="mobile"][data-slot="mobile-root"] {
+  background-image: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
 }
 
 @layer base {

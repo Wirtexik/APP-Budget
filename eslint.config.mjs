@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Materiały projektowe (makiety), nie kod aplikacji.
+    "design/**",
   ]),
 ]);
 

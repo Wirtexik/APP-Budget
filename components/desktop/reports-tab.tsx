@@ -10,7 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { BudgetGauge } from "@/components/dashboard/budget-gauge";
+import { BudgetGauge } from "@/components/desktop/budget-gauge";
 import {
   Accordion,
   AccordionContent,

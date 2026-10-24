@@ -2,7 +2,7 @@
 
 import { ReceiptText } from "lucide-react";
 
-import { CategorySelect } from "@/components/dashboard/category-select";
+import { CategorySelect } from "@/components/desktop/category-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

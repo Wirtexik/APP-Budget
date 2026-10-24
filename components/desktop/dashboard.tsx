@@ -9,17 +9,17 @@ import {
   Repeat,
 } from "lucide-react";
 
-import { CategoryForm } from "@/components/dashboard/category-form";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { DeleteTransactionDialog } from "@/components/dashboard/delete-transaction-dialog";
-import { EditTransactionDialog } from "@/components/dashboard/edit-transaction-dialog";
-import { QuickIncomeDialog } from "@/components/dashboard/quick-income-dialog";
-import { ReportsTab } from "@/components/dashboard/reports-tab";
-import { SummaryCards } from "@/components/dashboard/summary-cards";
-import { TransactionForm } from "@/components/dashboard/transaction-form";
-import { TransactionsTable } from "@/components/dashboard/transactions-table";
-import { HistoryFilters } from "@/components/dashboard/history-filters";
-import { RecurringTab } from "@/components/recurring/recurring-tab";
+import { CategoryForm } from "@/components/desktop/category-form";
+import { DashboardHeader } from "@/components/desktop/dashboard-header";
+import { DeleteTransactionDialog } from "@/components/desktop/delete-transaction-dialog";
+import { EditTransactionDialog } from "@/components/desktop/edit-transaction-dialog";
+import { QuickIncomeDialog } from "@/components/desktop/quick-income-dialog";
+import { ReportsTab } from "@/components/desktop/reports-tab";
+import { SummaryCards } from "@/components/desktop/summary-cards";
+import { TransactionForm } from "@/components/desktop/transaction-form";
+import { TransactionsTable } from "@/components/desktop/transactions-table";
+import { HistoryFilters } from "@/components/desktop/history-filters";
+import { RecurringTab } from "@/components/desktop/recurring/recurring-tab";
 import {
   Card,
   CardContent,

@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { CircleArrowDown, CircleArrowUp, Repeat } from "lucide-react";
 import { toast } from "sonner";
 
-import { CategorySelect } from "@/components/dashboard/category-select";
+import { CategorySelect } from "@/components/desktop/category-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

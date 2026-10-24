@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, TrendingUp } from "lucide-react";
 
-import { CategorySelect } from "@/components/dashboard/category-select";
+import { CategorySelect } from "@/components/desktop/category-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

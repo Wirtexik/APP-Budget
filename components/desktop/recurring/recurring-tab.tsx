@@ -4,10 +4,10 @@ import { useState } from "react";
 import { CalendarClock, Plus, Repeat } from "lucide-react";
 import { toast } from "sonner";
 
-import { DeleteRecurringDialog } from "@/components/recurring/delete-recurring-dialog";
-import { RecurringRuleDialog } from "@/components/recurring/recurring-rule-dialog";
-import { RecurringRulesList } from "@/components/recurring/recurring-rules-list";
-import { UpcomingList } from "@/components/recurring/upcoming-list";
+import { DeleteRecurringDialog } from "@/components/desktop/recurring/delete-recurring-dialog";
+import { RecurringRuleDialog } from "@/components/desktop/recurring/recurring-rule-dialog";
+import { RecurringRulesList } from "@/components/desktop/recurring/recurring-rules-list";
+import { UpcomingList } from "@/components/desktop/recurring/upcoming-list";
 import { Button } from "@/components/ui/button";
 import {
   Card,

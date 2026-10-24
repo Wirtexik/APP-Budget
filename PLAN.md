@@ -96,7 +96,7 @@ Zrobiony w fazie C. Cel: desktop i mobile mają różne widoki, ale jedno źród
 
 **Zrobione** (Historia, szczegóły w ARCHITECTURE.md, sekcja „Historia”):
 
-- Logika w `lib/filters.ts` (czysty TypeScript, testy w `lib/filters.test.ts`), pasek w `components/dashboard/history-filters.tsx`.
+- Logika w `lib/filters.ts` (czysty TypeScript, testy w `lib/filters.test.ts`), pasek w `components/desktop/history-filters.tsx`.
 - Wyszukiwarka od pierwszej litery, w opisie i nazwie kategorii. Dopasowuje tylko początki wyrazów, bez wielkości liter i polskich znaków.
 - Menu „Filtry” (`components/ui/dropdown-menu.tsx`): typ Uznania/Obciążenia, „Zlecenia stałe” (łączy się z typem) i wiele kategorii, z licznikiem na przycisku. Dawny `transaction-type-filter.tsx` jest usunięty.
 - Menu „Sortuj”: data i kwota, rosnąco i malejąco. Nic nie zaznaczone oznacza kolejność domyślną.
@@ -119,7 +119,7 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 
 - Baza: migracja `supabase/migrations/20261018120000_recurring_rules.sql` (tabela `recurring_rules`, `transactions.recurring_rule_id`, RLS, RPC `materialize_recurring()` i `upcoming_recurring()`).
 - Logika: `lib/recurring.ts` (typy, presety, walidacja, opisy) i `lib/recurring-queries.ts` (CRUD, wstrzymanie, RPC), z testami.
-- Interfejs: zakładka „Zlecenia” w `components/recurring/` (lista, formularz dodawania i edycji, wstrzymanie i wznowienie, usuwanie, „Nadchodzące” na 30 dni).
+- Interfejs: zakładka „Zlecenia” w `components/desktop/recurring/` (lista, formularz dodawania i edycji, wstrzymanie i wznowienie, usuwanie, „Nadchodzące” na 30 dni).
 - Wykonywanie: `materializeRecurring()` przy otwarciu aplikacji, przed pierwszym pobraniem danych, oraz po każdej zmianie zlecenia.
 - Wykonane transakcje oznaczone ikoną zlecenia w tabelach.
 - `pg_cron` raz dziennie o 23:05 UTC: migracja `supabase/migrations/20261023120000_recurring_cron.sql`. Wywołanie przy otwarciu aplikacji zostaje jako zabezpieczenie.
@@ -130,7 +130,7 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 
 ## Etap 4: PC i mobile
 
-Zaczynamy dopiero po fazach A–E.
+Zaczynamy dopiero po fazach A–E. Program wdrożenia (wymagania, fazy F–O): [ETAP4_MOBILE.md](ETAP4_MOBILE.md).
 
 - **Struktura:** wybór wersji po stronie klienta (`useUiVariant` w `AppShell`, faza E): w miejsce drugiego `<Dashboard>` wchodzi `<MobileApp>`. Wspólne `lib/`, provider i hooki z fazy C; osobne komponenty w `components/desktop/` i `components/mobile/`. Obecne `components/dashboard/` przechodzi do `components/desktop/`.
 - **Przełącznik ręczny** „Automatycznie / Komputerowa / Mobilna”: `setOverride` z `useUiVariant` (zapis w `localStorage`).

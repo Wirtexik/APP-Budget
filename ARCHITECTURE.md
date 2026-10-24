@@ -63,7 +63,7 @@ Zasady, na których opiera się cała aplikacja:
 
 **Motyw** – przycisk `ThemeToggle` w nagłówku (logika w `lib/theme.ts`, hook `useTheme`): jedno kliknięcie przełącza „Systemowy” (ikona księżyca, domyślny, idzie za `prefers-color-scheme`) ↔ „Jasny” (ikona słońca, zawsze jasny). Osobnej opcji „Ciemny” nie ma. „Jasny” zapisuje się w `localStorage` (`motyw` = `light`), brak wpisu = systemowy. Ciemny motyw to klasa `dark` na `<html>`: ustawia ją skrypt w `<head>` przed renderem (bez mignięcia jasnego ekranu), a potem `ThemeSync`. Komunikaty (`Toaster`) i kolor paska przeglądarki (`theme-color`) idą za motywem.
 
-**Wybór wersji** (komputerowa / mobilna) – po stronie klienta, bez `proxy.ts` i User-Agent (`lib/ui-variant.ts`, hook `useUiVariant`). Ręczny wybór w `localStorage` (`wersja`) ma pierwszeństwo; bez niego decyduje `matchMedia("(max-width: 767px)")`, na bieżąco (obrót tabletu, zwężenie okna). Powód: sesja Supabase jest w przeglądarce, więc pulpit i tak renderuje się dopiero po jej sprawdzeniu, a serwer nie ma nic do pokazania wcześniej; `/` zostaje statyczne. Grupy tras `(desktop)`/`(mobile)` pod tym samym `/` odpadają (konflikt ścieżek). Do etapu 4 obie wersje renderują `Dashboard`; przełącznik ręczny dojdzie razem z wersją mobilną.
+**Wybór wersji** (komputerowa / mobilna) – po stronie klienta, bez `proxy.ts` i User-Agent (`lib/ui-variant.ts`, hook `useUiVariant`). Ręczny wybór w `localStorage` (`wersja`) ma pierwszeństwo; bez niego decyduje `matchMedia("(max-width: 767px)")`, na bieżąco (obrót tabletu, zwężenie okna). Powód: sesja Supabase jest w przeglądarce, więc pulpit i tak renderuje się dopiero po jej sprawdzeniu, a serwer nie ma nic do pokazania wcześniej; `/` zostaje statyczne. Grupy tras `(desktop)`/`(mobile)` pod tym samym `/` odpadają (konflikt ścieżek). Wersja mobilna to `MobileApp` (`components/mobile/`); jej tokeny wyglądu (`--primary`, `--background`, `--radius`, `--income`, `--glass`, `--glow`…) są w `app/globals.css` pod `[data-ui="mobile"]` i `.dark [data-ui="mobile"]`, więc desktop się nie zmienia. Panele `Drawer` renderują się w portalu, dlatego sam popup też ma `data-ui="mobile"`. Przełącznik ręczny dojdzie w fazie M; do tego czasu szkielet ma tymczasowy przycisk „Wersja komputerowa”.
 
 ## Struktura katalogów
 
@@ -78,18 +78,23 @@ components/
                         na /login; sesja dla dzieci przez useSession()
   app-shell.tsx         wspólna podstawa obu wersji: useDashboardUrl + BudgetDataProvider,
                         wybór wersji (useUiVariant)
-  dashboard/            wersja komputerowa: dashboard.tsx (zakładki, dialogi edycji/usuwania)
+  desktop/              wersja komputerowa: dashboard.tsx (zakładki, dialogi edycji/usuwania)
                         + formularze, dialogi, tabele, karty, history-filters.tsx (pasek
                         Historii), reports-tab.tsx, budget-gauge.tsx
-  recurring/            zakładka „Zlecenia”: recurring-tab.tsx (dialogi), lista zleceń,
+    recurring/          zakładka „Zlecenia”: recurring-tab.tsx (dialogi), lista zleceń,
                         „Nadchodzące”, formularz, dialog usuwania
-  shared/               wspólne dla obu wersji: signed-amount.tsx, theme-toggle.tsx
+  mobile/               wersja mobilna (etap 4): mobile-app.tsx – korzeń z data-ui="mobile"
+  shared/               wspólne dla obu wersji, niezależne od układu: signed-amount.tsx,
+                        theme-toggle.tsx (trafia tu tylko to, czego używają obie wersje)
   ui/                   komponenty shadcn/ui (nie edytować ręcznie bez potrzeby),
-                        m.in. dropdown-menu.tsx (Menu z Base UI)
+                        m.in. dropdown-menu.tsx (Menu z Base UI), drawer.tsx (panel z dołu,
+                        Drawer z Base UI, z uchwytem i safe-area)
 lib/
   budget.ts             typy, formatowanie, okres (Period, currentPeriod), zakresy dat,
                         kwoty i sumy w groszach (parseAmount, computeTotals)
   categories.ts         kategorie domyślne, listy wyboru, komunikat o blokadzie usunięcia
+  category-style.ts     ikona Lucide i kolor kategorii (mapa dla domyślnych, kolor z nazwy
+                        dla własnych); baza bez zmian
   queries.ts            zapytania do Supabase (dane miesiąca/roku, zapisy, usuwanie)
   recurring.ts          zlecenia stałe: typy, presety, walidacja formularza, opisy (czysta logika)
   recurring-queries.ts  zlecenia stałe: CRUD, wstrzymanie, RPC materialize/upcoming
@@ -110,6 +115,8 @@ lib/
   supabase.ts           klient Supabase (tworzony leniwie – rzuca wyjątek przy pustym .env)
   auth.ts               login ↔ e-mail
 supabase/schema.sql     schemat bazy + RLS
+design/mobile/          materiały projektowe wersji mobilnej (makiety.tsx, styl-kokpit.jpg,
+                        ikona.svg); wykluczone z tsconfig.json i ESLint, nie wchodzą do aplikacji
 ```
 
 Przepływ danych:

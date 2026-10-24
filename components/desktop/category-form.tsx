@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { EditCategoryDialog } from "@/components/dashboard/edit-category-dialog";
+import { EditCategoryDialog } from "@/components/desktop/edit-category-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
