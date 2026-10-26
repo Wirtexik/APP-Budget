@@ -4,6 +4,10 @@ import { useEffect, type ReactNode } from "react";
 import { Monitor, RefreshCw } from "lucide-react";
 
 import { BottomNav } from "@/components/mobile/bottom-nav";
+import { MobileDashboard } from "@/components/mobile/dashboard/mobile-dashboard";
+import { MobileHistory } from "@/components/mobile/history/mobile-history";
+import { MobileRecurring } from "@/components/mobile/recurring/mobile-recurring";
+import { RecurringFormRoute } from "@/components/mobile/recurring/mobile-recurring-form";
 import { FullScreen } from "@/components/mobile/full-screen";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MobileTransactionForm } from "@/components/mobile/transaction-form/mobile-transaction-form";
@@ -32,20 +36,28 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
   const visited = useVisited(url.view);
 
   // Formularz z URL. Edycja tylko dla wpisu z pobranego miesiąca: gdy go nie ma
-  // (stary link, inny miesiąc, wpis usunięty), parametr znika. Zlecenia – faza K.
+  // (stary link, inny miesiąc, wpis usunięty), parametr znika. Zlecenia
+  // sprawdza `RecurringFormRoute` (po doczytaniu listy zleceń).
   const { form, closeOverlay } = url;
   const editId = form?.kind === "transaction" ? form.id : null;
   const editing = editId ? monthTransactions.find((t) => t.id === editId) : undefined;
-  const formInvalid =
-    form !== null && (form.kind === "recurring" || (editId !== null && !loading && !editing));
+  const formInvalid = editId !== null && !loading && !editing;
   useEffect(() => {
     if (formInvalid) closeOverlay();
   }, [formInvalid, closeOverlay]);
 
   const views: Record<View, ReactNode> = {
-    kokpit: <Placeholder>Kokpit powstanie w fazie I.</Placeholder>,
-    historia: <Placeholder>Historia powstanie w fazie J.</Placeholder>,
-    zlecenia: <Placeholder>Zlecenia powstaną w fazie K.</Placeholder>,
+    kokpit: <MobileDashboard />,
+    historia: (
+      <MobileHistory
+        filters={url.filters}
+        onFiltersChange={url.setFilters}
+        onEdit={(id) => url.openForm({ kind: "transaction", id })}
+      />
+    ),
+    zlecenia: (
+      <MobileRecurring onOpenForm={(id) => url.openForm({ kind: "recurring", id })} />
+    ),
     raporty: <Placeholder>Raporty powstaną w fazie L.</Placeholder>,
   };
 
@@ -124,6 +136,10 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
           }
           onClose={closeOverlay}
         />
+      )}
+
+      {form?.kind === "recurring" && (
+        <RecurringFormRoute id={form.id} onClose={closeOverlay} />
       )}
 
       {url.screen === "wiecej" && (

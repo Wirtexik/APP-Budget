@@ -10,6 +10,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
+  budgetUsage,
   computeTotals,
   currency,
   type Category,
@@ -30,8 +31,8 @@ interface Segment {
   fill: string;
 }
 
-function buildSegments(income: number, expenses: number): Segment[] {
-  if (expenses >= income) {
+function buildSegments(income: number, expenses: number, exceeded: boolean): Segment[] {
+  if (exceeded) {
     return [{ name: "Wydane", value: expenses, fill: COLOR_EXCEEDED }];
   }
   const segments: Segment[] = [];
@@ -59,10 +60,11 @@ export function BudgetGauge({
   /** Odmieniony okres w miejscownikowej frazie „w tym ___” (np. „miesiącu”, „roku”). */
   periodNoun?: string;
 }) {
-  const { income, expenses, balance } = useMemo(
+  const totals = useMemo(
     () => computeTotals(transactions, categoryById),
     [transactions, categoryById]
   );
+  const { income, expenses, balance } = totals;
 
   if (income === 0 && expenses === 0) {
     return (
@@ -74,14 +76,15 @@ export function BudgetGauge({
     );
   }
 
-  const segments = buildSegments(income, expenses);
+  const { percent, exceeded } = budgetUsage(totals);
+  const segments = buildSegments(income, expenses, exceeded);
   const overBudget = balance < 0;
   const caption = overBudget ? "Na minusie" : "Zostało";
   const amountClass = overBudget ? "fill-destructive" : "fill-foreground";
 
   const percentText =
-    income > 0
-      ? `Wykorzystano ${Math.round((expenses / income) * 100)}% budżetu`
+    percent !== null
+      ? `Wykorzystano ${percent}% budżetu`
       : `Brak przychodów w tym ${periodNoun}`;
 
   return (

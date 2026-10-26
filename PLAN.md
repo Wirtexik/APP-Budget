@@ -1,6 +1,6 @@
 # Plan implementacji
 
-Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego kodu (2026-10-23). Każdy etap zamyka się przez `npm run typecheck`, `npm run lint`, `npm test` i `npm run build`, zanim zacznie się następny. Stan na 2026-10-23 (po fazie E): typecheck, lint i build czyste, 85/85 testów zielonych.
+Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego kodu (2026-10-23). Każdy etap zamyka się przez `npm run typecheck`, `npm run lint`, `npm test` i `npm run build`, zanim zacznie się następny. Stan na 2026-10-24 (po fazach F–H etapu 4): typecheck, lint i build czyste, 110/110 testów zielonych.
 
 ## Stan prac
 
@@ -10,7 +10,7 @@ Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego ko
 | 1 | Wydzielenie warstwy danych z `Dashboard` | **Zrobione** (faza C). |
 | 2 | Filtrowanie transakcji | Częściowo: w Historii wyszukiwarka, menu „Filtry” (typ, zlecenia stałe, wiele kategorii) i „Sortuj” (data, kwota), stan w URL (faza D). Zostaje: kwoty, zakres dat. |
 | 3 | Zlecenia stałe | **Zrobione** (baza, logika, interfejs, `pg_cron`). Układ na telefon przechodzi do etapu 4. |
-| 4 | Interfejs mobilny | Do zrobienia. Fazy A–E zrobione, można zaczynać. |
+| 4 | Interfejs mobilny | W trakcie: fazy F–H zrobione (katalogi i tokeny, powłoka z nawigacją i wyborem okresu, formularz transakcji). Dalej faza I (Kokpit i lista z przesunięciem). Szczegóły: [ETAP4_MOBILE.md](ETAP4_MOBILE.md). |
 | 5 | Dopracowanie interfejsu | Do zrobienia. |
 
 Kolejność etapów 1, 2, 4, 5 zostaje taka jak była: warstwa danych przed rozdzieleniem PC i mobile, filtry przed oboma interfejsami, dopracowanie na końcu.
@@ -86,7 +86,7 @@ Zastąpiony przez fazy A i B powyżej. Z pierwotnej listy:
 - Limit 1000 wierszy: naprawione w `fetchYearlyTransactions` (faza B).
 - Dokładność kwot: sumy w groszach (faza B).
 - Strefy czasowe: sprawdzone, bez błędu w kodzie klienta (faza B, tylko dokumentacja).
-- Testy: Vitest, 79 testów (`recurring`, `filters`, `budget`, `categories`, `errors`, `transaction-input`, `dashboard-url`).
+- Testy: Vitest, 79 testów po fazie B (`recurring`, `filters`, `budget`, `categories`, `errors`, `transaction-input`, `dashboard-url`); po fazie H etapu 4 jest ich 110 (doszły `ui-variant`, `theme`, `category-style`, `amount-input`).
 
 ## Etap 1: warstwa danych
 
@@ -130,10 +130,10 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 
 ## Etap 4: PC i mobile
 
-Zaczynamy dopiero po fazach A–E. Program wdrożenia (wymagania, fazy F–O): [ETAP4_MOBILE.md](ETAP4_MOBILE.md).
+Program wdrożenia (wymagania, fazy F–O): [ETAP4_MOBILE.md](ETAP4_MOBILE.md). Zrobione fazy F–H (2026-10-24), klawiatura kwoty sprawdzona na iOS i Androidzie (zostaje systemowa).
 
-- **Struktura:** wybór wersji po stronie klienta (`useUiVariant` w `AppShell`, faza E): w miejsce drugiego `<Dashboard>` wchodzi `<MobileApp>`. Wspólne `lib/`, provider i hooki z fazy C; osobne komponenty w `components/desktop/` i `components/mobile/`. Obecne `components/dashboard/` przechodzi do `components/desktop/`.
-- **Przełącznik ręczny** „Automatycznie / Komputerowa / Mobilna”: `setOverride` z `useUiVariant` (zapis w `localStorage`).
+- **Struktura:** wybór wersji po stronie klienta (`useUiVariant` w `AppShell`, faza E): w miejsce drugiego `<Dashboard>` wchodzi `<MobileApp>`. Wspólne `lib/`, provider i hooki z fazy C; osobne komponenty w `components/desktop/` i `components/mobile/`. Dawne `components/dashboard/` jest już w `components/desktop/` (faza F).
+- **Przełącznik ręczny** „Automatycznie / Komputerowa / Mobilna”: `setOverride` z `useUiVariant` (zapis w `localStorage`). Do fazy M w mobilnym ekranie „Więcej” jest tymczasowy przycisk „Wersja komputerowa”.
 - **Interfejs mobilny, całkiem inny niż desktopowy:**
   - dolna nawigacja (Kokpit, Historia, „+”, Zlecenia, Raporty), z odstępem na `safe-area`;
   - pełnoekranowy formularz dodawania z dużym polem kwoty (na `useTransactionForm`);
@@ -155,6 +155,6 @@ Spójne stany ładowania (szkielety), puste stany, komunikaty błędów, dostęp
 2. ~~Wykrywanie urządzenia~~ Rozstrzygnięte (faza E): po stronie klienta, szerokość ekranu + ręczny wybór w `localStorage`, bez `proxy.ts`.
 3. ~~Dane roczne~~ Rozstrzygnięte: partie po `range()`, bez zmian w bazie.
 4. ~~Tryb ciemny~~ Rozstrzygnięte (faza E): systemowy z przełącznikiem.
-5. ~~Zakres lat w selektorze~~ Na razie sztywny; wrócić w etapie 4.
+5. ~~Zakres lat w selektorze~~ Rozstrzygnięte w etapie 4 (faza G): zostaje sztywny `YEAR_ITEMS`, strzałki okresu gasną na końcu zakresu.
 6. ~~Testy~~ Vitest jest dodany, `lib/budget.ts` i `lib/categories.ts` pokryte w fazie B.
 7. ~~Precyzja kwot zleceń~~ Rozstrzygnięte: tylko limit `MAX_AMOUNT` w kodzie, bez migracji.

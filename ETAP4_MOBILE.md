@@ -42,7 +42,7 @@ Folder jest wykluczony z `tsconfig.json` i ESLint, nie wchodzi do aplikacji.
 - `inputMode="decimal"` otwiera klawiaturę numeryczną z separatorem dziesiętnym. Na iOS to dokładnie cyfry + separator.
 - **Separator zależy od ustawień regionu telefonu, nie od strony.** Przy regionie „Polska” to przecinek, przy innym może być kropka. `parseAmount` przyjmuje oba, a pole przy wpisywaniu zamienia kropkę na przecinek, więc użytkownik zawsze widzi przecinek.
 - Na Androidzie (Gboard i inne) klawiatura „decimal” bywa szersza (np. dodatkowe `-`, `.`, spacja). Kontrolować tego się nie da; pole odrzuca wszystko poza cyframi i jednym przecinkiem z najwyżej 2 cyframi po nim.
-- Jeśli na Twoim telefonie wynik nie będzie wystarczający, wracamy do własnej klawiatury (decyzja po fazie H, na prawdziwym urządzeniu).
+- **Sprawdzone 2026-10-24 na iOS i Androidzie:** klawiatura systemowa wystarcza, zostaje. Do własnej klawiatury wracamy tylko, gdyby wyszły problemy w codziennym użyciu.
 
 ## Wygląd (na podstawie `styl-kokpit.jpg`)
 
@@ -65,6 +65,8 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - Prawy róg nagłówka: awatar zamiast „⋯” (wg grafiki), otwiera „Więcej”. Bez dzwonka.
 - Ekran 1: bez ramki karty wokół paska budżetu i z wykresem w karcie salda (wg grafiki).
 - Ekran 4: bez własnej klawiatury; przycisk „Zapisz” przyklejony nad systemową klawiaturą.
+- Ekran 3: typ jako „Wszystkie / Uznania / Obciążenia” (makieta ma dwa segmenty; bez „Wszystkie” powrót do obu typów byłby nieodkrywalny).
+- Ekran 10: kategoria jako kafelki (jak w formularzu transakcji) zamiast wiersza „Kategoria ›”; częstotliwość tylko z presetów (bez „Inne: co N …”, jak na desktopie), nietypowy harmonogram z bazy zostaje na liście.
 - Ekran 9: „Nadchodzące” pokazuje tylko to, co zwraca `upcoming_recurring` (bez przekreślonych wstrzymanych).
 - Ekran 13 (stany pomocnicze): robione razem z odpowiednimi ekranami, w stylu z grafiki.
 
@@ -105,29 +107,32 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - [x] Kafelek „+ Nowa” w kategoriach: mały panel z nazwą, zapis przez `insertCategory`, nowa kategoria od razu zaznaczona.
 - [x] Otwieranie przez „+” (`?formularz=nowy`) i z listy (`?formularz=<id>`); id spoza pobranego miesiąca → formularz się nie otwiera, parametr znika.
 - **Decyzja (2026-10-24):** przełącznik typu działa także w edycji (`setType` w `useTransactionForm`): zmiana typu czyści kategorię, powrót do pierwotnego typu ją przywraca. Desktop zostaje przy stałym typie – wyrównanie zapisane w PLAN.md, etap 5. „+ Nowa” z nazwą istniejącej kategorii (także domyślnej) tylko ją zaznacza (`existingCategoryValue`). Przycisk zapisu nad klawiaturą iOS: `useKeyboardInset` (`visualViewport`).
-- [ ] **Sprawdzenie na telefonie:** jaka klawiatura się otwiera (iOS i Android); decyzja, czy zostaje systemowa.
+- [x] **Sprawdzenie na telefonie:** jaka klawiatura się otwiera (iOS i Android); decyzja, czy zostaje systemowa. Sprawdzone 2026-10-24: zostaje systemowa.
 
 ### Faza I: Kokpit i lista transakcji z przesunięciem
 
-- [ ] `lib/balance-series.ts`: saldo narastająco dzień po dniu dla okresu (do dziś albo do końca miesiąca), w groszach, z testami (pusty miesiąc, przyszły miesiąc, wpisy z tego samego dnia).
-- [ ] Kokpit wg grafiki: karta salda z wykresem (Recharts `AreaChart`, bez osi), karty przychodów i wydatków, pasek budżetu. Procent wykorzystania i stan (normalny/przekroczony) z jednej funkcji w `lib/`, wspólnej z `BudgetGauge` (wydzielić, jeśli dziś liczy go komponent).
-- [ ] `lib/swipe.ts`: czysta logika gestu (próg odsłonięcia, kierunek poziomy vs pionowy, przyciąganie do 0 / szerokości przycisków), z testami.
-- [ ] Hook `useSwipeReveal` (`pointerdown/move/up`, `touch-action: pan-y`); w danej chwili odsłonięty najwyżej jeden wiersz, przewinięcie listy go zamyka.
-- [ ] `MobileTransactionList`: wpisy pogrupowane po dniach (nagłówek z datą i sumą dnia w groszach), ikona i kolor kategorii, `SignedAmount`, ikona zlecenia. Dotknięcie = edycja, „Usuń” = potwierdzenie w `Drawer` (`deleteTransaction`).
-- [ ] Dostępność: akcje osiągalne też bez gestu (klawiatura, czytnik ekranu).
+- [x] `lib/balance-series.ts`: saldo narastająco dzień po dniu dla okresu (do dziś albo do końca miesiąca), w groszach, z testami (pusty miesiąc, przyszły miesiąc, wpisy z tego samego dnia).
+- [x] Kokpit wg grafiki: karta salda z wykresem (Recharts `AreaChart`, bez osi), karty przychodów i wydatków, pasek budżetu. Procent wykorzystania i stan (normalny/przekroczony) z jednej funkcji w `lib/`, wspólnej z `BudgetGauge` (wydzielić, jeśli dziś liczy go komponent).
+- [x] `lib/swipe.ts`: czysta logika gestu (próg odsłonięcia, kierunek poziomy vs pionowy, przyciąganie do 0 / szerokości przycisków), z testami.
+- [x] Hook `useSwipeReveal` (`pointerdown/move/up`, `touch-action: pan-y`); w danej chwili odsłonięty najwyżej jeden wiersz, przewinięcie listy go zamyka.
+- [x] `MobileTransactionList`: wpisy pogrupowane po dniach (nagłówek z datą i sumą dnia w groszach), ikona i kolor kategorii, `SignedAmount`, ikona zlecenia. Dotknięcie = edycja, „Usuń” = potwierdzenie w `Drawer` (`deleteTransaction`).
+- [x] Dostępność: akcje osiągalne też bez gestu (klawiatura, czytnik ekranu).
+- **Decyzje (2026-10-26):** `budgetUsage` w `lib/budget.ts` (przekroczenie przy wydatkach >= przychodach, jak czerwona oponka `BudgetGauge`). Wykres salda kończy się na dziś, a kwota na karcie obejmuje cały miesiąc (także wpisy z późniejszą datą). Grupowanie i nagłówki dni w `lib/transaction-groups.ts`. Lista tymczasowo w widoku Historia (wpisy miesiąca bez filtrów; filtry w fazie J). Dotknięcie odsłoniętego wiersza albo poza nim zamyka go bez otwierania edycji.
 
 ### Faza J: Historia
 
-- [ ] Wyszukiwarka na górze (ta sama logika `lib/filters.ts`, wartość w URL).
-- [ ] Przycisk filtrów z licznikiem otwiera `Drawer`: typ, „Tylko zlecenia stałe”, kategorie (kafelki wielokrotnego wyboru), sortowanie, „Pokaż N wyników”, „Wyczyść wszystko”.
-- [ ] Lista z fazy I, pusty stan „Brak transakcji pasujących do filtrów” z „Wyczyść filtry”.
+- [x] Wyszukiwarka na górze (ta sama logika `lib/filters.ts`, wartość w URL).
+- [x] Przycisk filtrów z licznikiem otwiera `Drawer`: typ, „Tylko zlecenia stałe”, kategorie (kafelki wielokrotnego wyboru), sortowanie, „Pokaż N wyników”, „Wyczyść wszystko”.
+- [x] Lista z fazy I, pusty stan „Brak transakcji pasujących do filtrów” z „Wyczyść filtry”.
+- **Decyzje (2026-10-26):** panel filtrów działa na żywo (każda zmiana od razu w URL i na liście), „Pokaż N wyników” tylko go zamyka. Znaczek na przycisku: `drawerFilterCount` (menu + sortowanie inne niż domyślne); „Wyczyść wszystko” (`clearDrawerFilters`) zostawia wyszukiwanie, „Wyczyść filtry” w pustym stanie czyści wszystko. Przy sortowaniu po kwocie lista bez nagłówków dni, z datą w wierszu. Wspólny `components/mobile/segmented.tsx` (też dla fazy L). `plural()` w `lib/budget.ts` (odmiana „wynik/wyniki/wyników”).
 
 ### Faza K: Zlecenia jako karty
 
-- [ ] `recurring-rule-dialog.tsx` (479 linii) rozdzielić na hook `useRecurringRuleForm` (stan, walidacja przez `validateRuleInput`, zapis) i pola; dialog desktopowy działa jak dotąd.
-- [ ] `MobileRecurringList`: karta na zlecenie (opis, kategoria z ikoną, kwota, harmonogram, następny termin, status), przełącznik wstrzymania, menu z edycją i usuwaniem (potwierdzenie w `Drawer`).
-- [ ] „Nadchodzące (30 dni)” jako lista pod kartami.
-- [ ] Formularz zlecenia na pełnym ekranie (`?formularz=zlecenie` / `zlecenie-<uuid>`, ustalone w fazie G) i przycisk „Dodaj zlecenie”.
+- [x] `recurring-rule-dialog.tsx` (479 linii) rozdzielić na hook `useRecurringRuleForm` (stan, walidacja przez `validateRuleInput`, zapis) i pola; dialog desktopowy działa jak dotąd.
+- [x] `MobileRecurringList`: karta na zlecenie (opis, kategoria z ikoną, kwota, harmonogram, następny termin, status), przełącznik wstrzymania, menu z edycją i usuwaniem (potwierdzenie w `Drawer`).
+- [x] „Nadchodzące (30 dni)” jako lista pod kartami.
+- [x] Formularz zlecenia na pełnym ekranie (`?formularz=zlecenie` / `zlecenie-<uuid>`, ustalone w fazie G) i przycisk „Dodaj zlecenie”.
+- **Decyzje (2026-10-27):** `useRecurringRuleForm` (dialog desktopowy 479 → 322 linie) z `setType` także w edycji (jak w transakcjach; desktop dalej bez zmiany typu w edycji). `useToggleRecurring` i `useDeleteRecurring` w `lib/hooks/use-recurring-actions.ts`, wspólne z desktopem. Dotknięcie karty otwiera edycję; „⋯” to panel akcji z dołu (Edytuj / Usuń), potwierdzenie usunięcia w tym samym panelu (`RecurringActionsDrawer`, też dla „Usuń zlecenie” w formularzu). `RecurringFormRoute` doczytuje zlecenia przy otwarciu z linku, nieznane id zamyka formularz. `dayLabel` zna „Jutro”. Wspólny `components/mobile/toggle-switch.tsx`. `plural` z `lib/recurring.ts` zastąpiony tym z `lib/budget.ts`.
 
 ### Faza L: Raporty
 

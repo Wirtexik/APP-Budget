@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,9 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { currency } from "@/lib/budget";
-import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
+import { useBudgetData } from "@/lib/hooks/budget-data";
+import { useDeleteRecurring } from "@/lib/hooks/use-recurring-actions";
 import { describeSchedule, type RecurringRule } from "@/lib/recurring";
-import { deleteRecurringRule } from "@/lib/recurring-queries";
 
 // Potwierdzenie usunięcia zlecenia. `rule === null` oznacza „zamknięte”.
 export function DeleteRecurringDialog({
@@ -25,31 +24,16 @@ export function DeleteRecurringDialog({
   rule: RecurringRule | null;
   onClose: () => void;
 }) {
-  const { userId, categoryById } = useBudgetData();
-  const { afterChange: onDeleted } = useRecurringData();
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { categoryById } = useBudgetData();
+  const { deleting, error, clearError, confirm: confirmDelete } = useDeleteRecurring();
 
   function close() {
-    setError(null);
+    clearError();
     onClose();
   }
 
   async function confirm() {
-    if (!rule) return;
-    setDeleting(true);
-    setError(null);
-
-    const failure = await deleteRecurringRule(userId, rule.id);
-    if (failure) {
-      setDeleting(false);
-      setError(failure);
-      return;
-    }
-
-    await onDeleted();
-    setDeleting(false);
-    close();
+    if (rule && (await confirmDelete(rule))) close();
   }
 
   const name = rule
