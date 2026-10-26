@@ -16,6 +16,7 @@ import {
   type Category,
   type Transaction,
 } from "@/lib/budget";
+import { cn } from "@/lib/utils";
 
 const CHART_CONFIG = { value: { label: "Kwota" } } satisfies ChartConfig;
 
@@ -54,11 +55,14 @@ export function BudgetGauge({
   transactions,
   categoryById,
   periodNoun = "miesiącu",
+  className,
 }: {
   transactions: Transaction[];
   categoryById: Map<string, Category>;
   /** Odmieniony okres w miejscownikowej frazie „w tym ___” (np. „miesiącu”, „roku”). */
   periodNoun?: string;
+  /** Domyślnie najwyżej 280 px szerokości; mobile rozciąga wykres na całą kartę. */
+  className?: string;
 }) {
   const totals = useMemo(
     () => computeTotals(transactions, categoryById),
@@ -68,7 +72,12 @@ export function BudgetGauge({
 
   if (income === 0 && expenses === 0) {
     return (
-      <div className="flex w-full max-w-[280px] flex-col items-center justify-center gap-2">
+      <div
+        className={cn(
+          "flex w-full max-w-[280px] flex-col items-center justify-center gap-2",
+          className
+        )}
+      >
         <p className="py-10 text-center text-sm text-muted-foreground">
           Brak transakcji w tym {periodNoun}.
         </p>
@@ -88,7 +97,7 @@ export function BudgetGauge({
       : `Brak przychodów w tym ${periodNoun}`;
 
   return (
-    <div className="flex w-full max-w-[280px] flex-col items-center gap-3">
+    <div className={cn("flex w-full max-w-[280px] flex-col items-center gap-3", className)}>
       <ChartContainer config={CHART_CONFIG} className="aspect-square w-full">
         <PieChart>
           <ChartTooltip
@@ -116,7 +125,8 @@ export function BudgetGauge({
             data={segments}
             dataKey="value"
             nameKey="name"
-            innerRadius={78}
+            // Procent zamiast pikseli: pierścień rośnie razem z wykresem.
+            innerRadius="70%"
             strokeWidth={2}
             isAnimationActive={false}
             paddingAngle={segments.length > 1 ? 2 : 0}

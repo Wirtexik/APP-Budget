@@ -148,6 +148,7 @@ Program wdrożenia (wymagania, fazy F–O): [ETAP4_MOBILE.md](ETAP4_MOBILE.md). 
 Spójne stany ładowania (szkielety), puste stany, komunikaty błędów, dostępność (focus, kontrast). Tryb ciemny działa od fazy E; zostaje przejrzenie kolorów w ciemnym motywie (gradienty kart, wykres, kolory kwot). Szczegóły do ustalenia po zobaczeniu aplikacji na obu urządzeniach.
 
 - **Zmiana typu przy edycji transakcji na desktopie** (decyzja z fazy H etapu 4, 2026-10-24). W mobile edycja pozwala przełączyć Wydatek/Przychód: zmiana typu czyści kategorię (zapis zablokowany, dopóki nie wybierze się nowej), powrót do pierwotnego typu przywraca pierwotną kategorię. Desktopowe `EditTransactionDialog` nadal trzyma typ wpisu (lista kategorii tylko tego typu), więc wersje różnią się w tej jednej rzeczy. Do wyrównania: przełącznik typu w oknie edycji na `setType` z `useTransactionForm` (hook już to obsługuje). Skutek uboczny jak w mobile: wpis ze zlecenia stałego może zmienić typ niezależnie od zlecenia.
+- **Potwierdzenie usunięcia kategorii na desktopie** (decyzja z fazy M etapu 4, 2026-10-27). W mobile „Usuń” przy kategorii otwiera panel z potwierdzeniem, na desktopie kosz w `CategoryForm` usuwa od razu (blokada dla używanych kategorii działa w obu). Do wyrównania: okno potwierdzenia na desktopie na tym samym `useRemoveCategory`.
 
 ## Decyzje do podjęcia
 

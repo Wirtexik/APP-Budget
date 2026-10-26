@@ -10,7 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { BudgetGauge } from "@/components/desktop/budget-gauge";
+import { BudgetGauge } from "@/components/shared/budget-gauge";
 import {
   Accordion,
   AccordionContent,
@@ -25,18 +25,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  categoryOf,
-  currency,
-  formatDate,
-  fromGrosze,
-  toGrosze,
-  type Category,
-  type CategoryType,
-  type Id,
-  type Transaction,
-} from "@/lib/budget";
+import { currency, formatDate, type CategoryType } from "@/lib/budget";
 import { useBudgetData, useYearlyData } from "@/lib/hooks/budget-data";
+import { groupTransactions, share } from "@/lib/report-groups";
 
 const EXPENSE_COLORS = [
   "#f97316",
@@ -61,76 +52,29 @@ const INCOME_COLORS = [
   "#0ea5e9",
 ];
 
-interface CategoryGroup {
-  category: Category;
-  total: number;
-  color: string;
-  transactions: Transaction[];
-}
-
-interface TypeGroup {
-  total: number;
-  groups: CategoryGroup[];
-}
-
-// Grupuje transakcje wg kategorii i typu. Kolejność transakcji w grupie zostaje taka,
-// jak w danych wejściowych (zapytanie sortuje je już od najnowszych).
-function groupTransactions(
-  categories: Category[],
-  transactions: Transaction[]
-): Record<CategoryType, TypeGroup> {
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  const groups = new Map<Id, CategoryGroup>();
-
-  for (const t of transactions) {
-    const category = categoryOf(t, byId);
-    if (!category) continue;
-
-    let group = groups.get(category.id);
-    if (!group) {
-      group = { category, total: 0, color: "", transactions: [] };
-      groups.set(category.id, group);
-    }
-    // Do czasu `build` suma jest w groszach (bez błędów zmiennoprzecinkowych).
-    group.total += toGrosze(t.amount);
-    group.transactions.push(t);
-  }
-
-  const build = (type: CategoryType, colors: string[]): TypeGroup => {
-    const list = [...groups.values()]
-      .filter((g) => g.category.type === type)
-      .sort((a, b) => b.total - a.total);
-    const total = list.reduce((sum, g) => sum + g.total, 0);
-    list.forEach((g, i) => {
-      g.color = colors[i % colors.length];
-      g.total = fromGrosze(g.total);
-    });
-    return { total: fromGrosze(total), groups: list };
-  };
-
-  return {
-    wydatek: build("wydatek", EXPENSE_COLORS),
-    przychod: build("przychod", INCOME_COLORS),
-  };
-}
+// Kolory kategorii wg miejsca w rankingu sum (ta sama pozycja – ten sam kolor).
+const colorAt = (colors: string[], index: number) => colors[index % colors.length];
 
 const TYPE_SECTIONS: {
   type: CategoryType;
   title: string;
   Icon: typeof TrendingUp;
   amount: string;
+  colors: string[];
 }[] = [
   {
     type: "wydatek",
     title: "Wydatki",
     Icon: TrendingDown,
     amount: "text-orange-700 dark:text-orange-300",
+    colors: EXPENSE_COLORS,
   },
   {
     type: "przychod",
     title: "Przychody",
     Icon: TrendingUp,
     amount: "text-emerald-700 dark:text-emerald-300",
+    colors: INCOME_COLORS,
   },
 ];
 
@@ -138,7 +82,6 @@ type Granularity = "miesiac" | "rok";
 
 export function ReportsTab() {
   const {
-    categories,
     categoryById,
     monthTransactions: transactions,
     monthLabel,
@@ -164,8 +107,8 @@ export function ReportsTab() {
   const periodNoun = isYear ? "roku" : "miesiącu";
 
   const grouped = useMemo(
-    () => groupTransactions(categories, activeTransactions),
-    [categories, activeTransactions]
+    () => groupTransactions(activeTransactions, categoryById),
+    [activeTransactions, categoryById]
   );
   const expenses = grouped.wydatek;
 
@@ -222,7 +165,7 @@ export function ReportsTab() {
                 </p>
               ) : (
                 <ul className="flex w-full max-h-56 flex-col gap-2 overflow-y-auto pr-2 md:max-w-sm">
-                  {expenses.groups.map((g) => (
+                  {expenses.groups.map((g, i) => (
                     <li
                       key={g.category.id}
                       className="flex items-center justify-between gap-3 text-sm"
@@ -230,13 +173,13 @@ export function ReportsTab() {
                       <span className="flex min-w-0 items-center gap-2">
                         <span
                           className="size-2.5 shrink-0 rounded-[2px]"
-                          style={{ background: g.color }}
+                          style={{ background: colorAt(EXPENSE_COLORS, i) }}
                         />
                         <span className="truncate">{g.category.name}</span>
                       </span>
                       <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
                         <span className="text-xs text-muted-foreground">
-                          {Math.round((g.total / expenses.total) * 100)}%
+                          {share(g.total, expenses.total)}%
                         </span>
                         <span className="font-medium">
                           {currency.format(g.total)}
@@ -268,7 +211,7 @@ export function ReportsTab() {
             </p>
           ) : (
             <Accordion multiple>
-              {TYPE_SECTIONS.map(({ type, title, Icon, amount }) => {
+              {TYPE_SECTIONS.map(({ type, title, Icon, amount, colors }) => {
                 const section = grouped[type];
                 return (
                   <AccordionItem key={type} value={type}>
@@ -293,7 +236,7 @@ export function ReportsTab() {
                           multiple
                           className="ml-2 w-auto border-l pl-3 sm:ml-3 sm:pl-4"
                         >
-                          {section.groups.map((g) => (
+                          {section.groups.map((g, i) => (
                             <AccordionItem
                               key={g.category.id}
                               value={`${type}:${g.category.id}`}
@@ -303,7 +246,7 @@ export function ReportsTab() {
                                   <span className="flex min-w-0 items-center gap-2">
                                     <span
                                       className="size-2.5 shrink-0 rounded-[2px]"
-                                      style={{ background: g.color }}
+                                      style={{ background: colorAt(colors, i) }}
                                     />
                                     <span className="truncate">
                                       {g.category.name}

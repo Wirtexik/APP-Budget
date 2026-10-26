@@ -16,3 +16,17 @@ export const parseUiVariant = (value: string | null): UiVariant | null =>
 
 export const resolveUiVariant = (override: UiVariant | null, narrow: boolean): UiVariant =>
   override ?? (narrow ? "mobile" : "desktop");
+
+/** Wybór w przełączniku: „auto” to brak ręcznego wyboru (`null`). */
+export type UiChoice = UiVariant | "auto";
+
+export const UI_CHOICES: { value: UiChoice; label: string }[] = [
+  { value: "auto", label: "Automatycznie" },
+  { value: "desktop", label: "Komputerowa" },
+  { value: "mobile", label: "Mobilna" },
+];
+
+export const choiceFromOverride = (override: UiVariant | null): UiChoice => override ?? "auto";
+
+export const overrideFromChoice = (choice: UiChoice): UiVariant | null =>
+  choice === "auto" ? null : choice;

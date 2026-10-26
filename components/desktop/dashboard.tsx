@@ -38,16 +38,9 @@ import {
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import type { DashboardUrl } from "@/lib/hooks/use-dashboard-url";
 import { useVisited } from "@/lib/hooks/use-visited";
-import { getSupabase } from "@/lib/supabase";
+import { signOut } from "@/lib/supabase";
 
 const RECENT_LIMIT = 5;
-
-// Przekierowanie na /login robi listener `onAuthStateChange` w SessionGate –
-// jedno miejsce dla obu wersji i dla wylogowania w innej karcie. `signOut()`
-// usuwa sesję lokalnie nawet przy błędzie sieci, więc zdarzenie zawsze przyjdzie.
-function handleSignOut() {
-  void getSupabase().auth.signOut();
-}
 
 // Wersja komputerowa. Provider danych i stan z URL stawia AppShell, wspólny
 // dla obu wersji; zakładka, okres i filtry Historii żyją w URL.
@@ -118,7 +111,7 @@ export function Dashboard({ login, url }: { login: string; url: DashboardUrl }) 
           login={login}
           period={period}
           onPeriodChange={selectPeriod}
-          onSignOut={handleSignOut}
+          onSignOut={signOut}
         />
 
         {loadError && (

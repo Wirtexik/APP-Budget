@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { FolderPlus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { EditCategoryDialog } from "@/components/desktop/edit-category-dialog";
 import { Button } from "@/components/ui/button";
@@ -22,28 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  TYPE_ITEMS,
-  TYPE_LABEL,
-  type Category,
-  type CategoryType,
-  type Id,
-} from "@/lib/budget";
-import { categoryUsageMessage, ownCategories } from "@/lib/categories";
+import { TYPE_ITEMS, TYPE_LABEL, type Category, type CategoryType } from "@/lib/budget";
+import { ownCategories } from "@/lib/categories";
 import { useBudgetData } from "@/lib/hooks/budget-data";
-import {
-  countCategoryUsage,
-  deleteCategory,
-  insertCategory,
-} from "@/lib/queries";
+import { useCategoryForm, useRemoveCategory } from "@/lib/hooks/use-category-actions";
 
 export function CategoryForm() {
-  const { userId, categories, refresh: onSaved } = useBudgetData();
-  const [name, setName] = useState("");
-  const [type, setType] = useState<CategoryType>("wydatek");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [removingId, setRemovingId] = useState<Id | null>(null);
+  const { categories } = useBudgetData();
+  const { name, setName, type, setType, error, saving, submit } = useCategoryForm(null);
+  const { removingId, remove } = useRemoveCategory();
 
   // `editKey` wymusza świeży stan formularza przy każdym otwarciu edycji.
   const [editingCategory, setEditingCategory] = useState<Category | null>(
@@ -58,56 +44,9 @@ export function CategoryForm() {
     setEditKey((k) => k + 1);
   }
 
-  async function handleRemove(category: Category) {
-    setRemovingId(category.id);
-
-    const blocked = (description: string) =>
-      toast.error(`Nie można usunąć kategorii „${category.name}”`, {
-        description,
-        duration: 7000,
-      });
-
-    const usage = await countCategoryUsage(userId, category.id);
-    const usageMessage = categoryUsageMessage(usage);
-
-    if (usage.error) {
-      toast.error("Nie udało się sprawdzić, czy kategoria jest używana", {
-        description: usage.error,
-      });
-    } else if (usageMessage) {
-      blocked(usageMessage);
-    } else {
-      const { error, inUse } = await deleteCategory(userId, category.id);
-      if (inUse) {
-        blocked(
-          "Ma przypisane transakcje lub zlecenia stałe. Usuń je lub przenieś do innej kategorii i spróbuj ponownie."
-        );
-      } else if (error) {
-        toast.error("Nie udało się usunąć kategorii", { description: error });
-      } else {
-        toast.success(`Usunięto kategorię „${category.name}”`);
-      }
-    }
-
-    await onSaved();
-    setRemovingId(null);
-  }
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-
-    setSaving(true);
-    const { error: failure } = await insertCategory(userId, { name, type });
-    setSaving(false);
-
-    if (failure !== null) {
-      setError(failure);
-      return;
-    }
-
-    setName("");
-    await onSaved();
+    void submit();
   }
 
   return (
@@ -208,7 +147,7 @@ export function CategoryForm() {
                       title="Usuń kategorię"
                       className="text-muted-foreground hover:text-destructive"
                       disabled={removingId !== null}
-                      onClick={() => handleRemove(c)}
+                      onClick={() => remove(c)}
                     >
                       <Trash2 />
                     </Button>

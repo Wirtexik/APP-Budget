@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { Monitor, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileDashboard } from "@/components/mobile/dashboard/mobile-dashboard";
 import { MobileHistory } from "@/components/mobile/history/mobile-history";
+import { MobileReports } from "@/components/mobile/reports/mobile-reports";
 import { MobileRecurring } from "@/components/mobile/recurring/mobile-recurring";
 import { RecurringFormRoute } from "@/components/mobile/recurring/mobile-recurring-form";
-import { FullScreen } from "@/components/mobile/full-screen";
 import { MobileHeader } from "@/components/mobile/mobile-header";
+import { MoreScreen } from "@/components/mobile/more/more-screen";
 import { MobileTransactionForm } from "@/components/mobile/transaction-form/mobile-transaction-form";
 import { Button } from "@/components/ui/button";
 import { VIEWS, mobileFormParam, type View } from "@/lib/dashboard-url";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import type { DashboardUrl } from "@/lib/hooks/use-dashboard-url";
-import { useUiVariant } from "@/lib/hooks/use-ui-variant";
 import { useVisited } from "@/lib/hooks/use-visited";
 
 const VIEW_TITLES: Record<View, string> = {
@@ -31,7 +31,6 @@ const VIEW_TITLES: Record<View, string> = {
 export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) {
   const { period, selectPeriod, monthTransactions, loading, loadError, refresh } =
     useBudgetData();
-  const { setOverride } = useUiVariant();
   // Ukryte widoki zostają zamontowane od pierwszej wizyty (jak zakładki na PC).
   const visited = useVisited(url.view);
 
@@ -58,7 +57,7 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
     zlecenia: (
       <MobileRecurring onOpenForm={(id) => url.openForm({ kind: "recurring", id })} />
     ),
-    raporty: <Placeholder>Raporty powstaną w fazie L.</Placeholder>,
+    raporty: <MobileReports />,
   };
 
   return (
@@ -142,30 +141,7 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
         <RecurringFormRoute id={form.id} onClose={closeOverlay} />
       )}
 
-      {url.screen === "wiecej" && (
-        <FullScreen title="Więcej" onClose={url.closeOverlay}>
-          <p className="py-4 text-sm text-muted-foreground">
-            Zalogowany jako <span className="font-semibold text-foreground">{login}</span>
-          </p>
-          {/* Tymczasowe wyjście do czasu przełącznika wersji (faza M). */}
-          <Button
-            variant="outline"
-            className="h-12 rounded-2xl"
-            onClick={() => setOverride("desktop")}
-          >
-            <Monitor />
-            Wersja komputerowa
-          </Button>
-        </FullScreen>
-      )}
+      {url.screen === "wiecej" && <MoreScreen login={login} onClose={closeOverlay} />}
     </div>
-  );
-}
-
-function Placeholder({ children }: { children: ReactNode }) {
-  return (
-    <p className="flex flex-1 items-center justify-center py-16 text-center text-sm text-muted-foreground">
-      {children}
-    </p>
   );
 }

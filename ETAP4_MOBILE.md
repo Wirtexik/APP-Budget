@@ -136,16 +136,18 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 
 ### Faza L: Raporty
 
-- [ ] Przełącznik Miesiąc/Rok, `BudgetGauge` na pełną szerokość w karcie, „Wykorzystano N% budżetu” pod wykresem.
-- [ ] „Struktura transakcji”: Wydatki/Przychody → kategorie (udział %, pasek, kwota) → transakcje; legenda połączona ze strukturą jak na makiecie.
-- [ ] Logikę grupowania z `reports-tab.tsx` (`groupTransactions`) przenieść do `lib/`, jeśli mobile ma jej używać (z testami).
+- [x] Przełącznik Miesiąc/Rok, `BudgetGauge` na pełną szerokość w karcie, „Wykorzystano N% budżetu” pod wykresem.
+- [x] „Struktura transakcji”: Wydatki/Przychody → kategorie (udział %, pasek, kwota) → transakcje; legenda połączona ze strukturą jak na makiecie.
+- [x] Logikę grupowania z `reports-tab.tsx` (`groupTransactions`) przenieść do `lib/`, jeśli mobile ma jej używać (z testami).
+- **Decyzje (2026-10-27):** `groupTransactions` i `share` w `lib/report-groups.ts`, bez kolorów: desktop koloruje wg miejsca w rankingu (palety zostają w `reports-tab.tsx`), mobile ikoną i kolorem z `categoryStyle` (jak w Historii). `BudgetGauge` przeniesiony do `components/shared/` z propem `className` i `innerRadius="70%"` (pierścień skaluje się z szerokością). Miesiąc/Rok w stanie lokalnym, bez URL (jak na desktopie). Na starcie rozwinięte Wydatki.
 
 ### Faza M: ekran „Więcej” i przełącznik wersji
 
-- [ ] Ekran „Więcej” (`?ekran=wiecej`): „Zalogowany jako”, kategorie (lista z ikonami, „Domyślna” bez akcji, własne z edycją nazwy i typu z ostrzeżeniem i usuwaniem z `categoryUsageMessage`), „Dodaj kategorię”, motyw (`useTheme`), wersja interfejsu, „Wyloguj się”.
-- [ ] Logikę `CategoryForm` (230 linii) wydzielić do hooka, żeby obie wersje miały te same zasady (kategorie domyślne nieusuwalne, blokada usunięcia).
-- [ ] Przełącznik „Automatycznie / Komputerowa / Mobilna” na `useUiVariant().setOverride`.
-- [ ] Desktop: menu konta w `DashboardHeader` (login, wersja interfejsu, wylogowanie).
+- [x] Ekran „Więcej” (`?ekran=wiecej`): „Zalogowany jako”, kategorie (lista z ikonami, „Domyślna” bez akcji, własne z edycją nazwy i typu z ostrzeżeniem i usuwaniem z `categoryUsageMessage`), „Dodaj kategorię”, motyw (`useTheme`), wersja interfejsu, „Wyloguj się”.
+- [x] Logikę `CategoryForm` (230 linii) wydzielić do hooka, żeby obie wersje miały te same zasady (kategorie domyślne nieusuwalne, blokada usunięcia).
+- [x] Przełącznik „Automatycznie / Komputerowa / Mobilna” na `useUiVariant().setOverride`.
+- [x] Desktop: menu konta w `DashboardHeader` (login, wersja interfejsu, wylogowanie).
+- **Decyzje (2026-10-27):** `useCategoryForm` (dodawanie i edycja) i `useRemoveCategory` (sprawdzenie użycia, usunięcie, komunikaty) w `lib/hooks/use-category-actions.ts`, wspólne z `CategoryForm` i `EditCategoryDialog` (`CategoryForm` 230 → 169 linii). Kategorie w „Więcej” w podgrupach Wydatki / Przychody, domyślne z listy `DEFAULT_CATEGORIES` (także jeszcze niezapisane w bazie). Usuwanie w mobile z potwierdzeniem w `Drawer`, desktop bez zmian (wyrównanie w PLAN.md, etap 5); ostrzeżenie o zmianie typu tylko, gdy typ faktycznie się zmienia. `UI_CHOICES`, `choiceFromOverride` / `overrideFromChoice` w `lib/ui-variant.ts`, `signOut()` w `lib/supabase.ts`. Desktop: `AccountMenu` (awatar z loginem, `DropdownMenu`) zamiast przycisku „Wyloguj”, `ThemeToggle` zostaje obok.
 
 ### Faza N: PWA
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TYPE_ITEMS, type Category, type CategoryType } from "@/lib/budget";
-import { useBudgetData } from "@/lib/hooks/budget-data";
-import { updateCategory } from "@/lib/queries";
+import { useCategoryForm } from "@/lib/hooks/use-category-actions";
 
 // Okno edycji własnej kategorii: nazwa i typ. `category === null` oznacza „zamknięte”.
 export function EditCategoryDialog({
@@ -33,12 +32,9 @@ export function EditCategoryDialog({
   category: Category | null;
   onClose: () => void;
 }) {
-  const { userId, refresh: onSaved } = useBudgetData();
   // `key` na wywołaniu w rodzicu resetuje ten stan przy każdym nowym otwarciu.
-  const [name, setName] = useState(category?.name ?? "");
-  const [type, setType] = useState<CategoryType>(category?.type ?? "wydatek");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { name, setName, type, setType, error, setError, saving, submit } =
+    useCategoryForm(category);
 
   function close() {
     if (saving) return;
@@ -48,29 +44,7 @@ export function EditCategoryDialog({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!category) return;
-    setError(null);
-
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError("Podaj nazwę kategorii.");
-      return;
-    }
-
-    setSaving(true);
-    const failure = await updateCategory(userId, category.id, {
-      name: trimmed,
-      type,
-    });
-    setSaving(false);
-
-    if (failure) {
-      setError(failure);
-      return;
-    }
-
-    await onSaved();
-    onClose();
+    if (category && (await submit())) onClose();
   }
 
   return (

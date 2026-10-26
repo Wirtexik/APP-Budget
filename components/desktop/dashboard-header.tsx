@@ -1,9 +1,9 @@
 "use client";
 
-import { CalendarDays, LogOut, PiggyBank } from "lucide-react";
+import { CalendarDays, PiggyBank } from "lucide-react";
 
+import { AccountMenu } from "@/components/desktop/account-menu";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { MONTH_ITEMS, YEAR_ITEMS, type Period } from "@/lib/budget";
 
-// Nagłówek: nazwa aplikacji, globalny filtr miesiąca i roku, motyw i wylogowanie.
+// Nagłówek: nazwa aplikacji, globalny filtr miesiąca i roku, motyw i menu konta.
 export function DashboardHeader({
   login,
   period,
@@ -86,10 +86,7 @@ export function DashboardHeader({
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        <Button variant="outline" onClick={onSignOut} aria-label="Wyloguj">
-          <LogOut />
-          <span className="hidden sm:inline">Wyloguj</span>
-        </Button>
+        <AccountMenu login={login} onSignOut={onSignOut} />
       </div>
     </header>
   );
