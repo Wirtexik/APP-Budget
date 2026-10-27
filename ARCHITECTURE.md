@@ -72,9 +72,13 @@ Zasady, na których opiera się cała aplikacja:
 ```
 app/
   layout.tsx            layout (Server Component): czcionki (latin + latin-ext), viewport
-                        (viewport-fit=cover, theme-color), skrypt motywu, <ThemeSync />, <Toaster />
+                        (viewport-fit=cover, theme-color), appleWebApp, skrypt motywu, <ThemeSync />,
+                        <Toaster />
   page.tsx              Server Component: <SessionGate><AppShell /></SessionGate>
   login/page.tsx        logowanie loginem (dokleja @budzet.local)
+  manifest.ts           manifest PWA (/manifest.webmanifest): standalone, kolory z THEME_COLORS
+  icon.png, apple-icon.png  ikona karty (64 px) i ekranu początkowego iOS (180 px, pełne tło)
+public/icons/           ikony PWA: 192, 512 i maskable 512 (z design/mobile/render-icons.sh)
 components/
   auth/session-gate.tsx bramka sesji (klient): sprawdzenie sesji, listener, przekierowanie
                         na /login; sesja dla dzieci przez useSession()
@@ -142,7 +146,9 @@ lib/
   auth.ts               login ↔ e-mail
 supabase/schema.sql     schemat bazy + RLS
 design/mobile/          materiały projektowe wersji mobilnej (makiety.tsx, styl-kokpit.jpg,
-                        ikona.svg); wykluczone z tsconfig.json i ESLint, nie wchodzą do aplikacji
+                        ikona.svg, ikona-pelna.svg – wariant bez zaokrągleń dla maskable/iOS);
+                        render-icons.sh generuje PNG ikon przez Chrome headless (next/og nie
+                        obsługuje rozmycia z SVG); wykluczone z tsconfig.json i ESLint
 ```
 
 Przepływ danych:

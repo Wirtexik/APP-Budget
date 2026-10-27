@@ -151,10 +151,11 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 
 ### Faza N: PWA
 
-- [ ] PNG z `ikona.svg`: 192, 512, wersja `maskable` (motyw w bezpiecznym środku), `apple-icon` 180×180 i `app/icon.png`. SVG ma rozmycie (`feGaussianBlur`), którego `next/og` nie obsługuje, więc PNG powstają jednorazowo przez przeglądarkę (np. Chrome headless) i trafiają do repo. iOS nie bierze przezroczystości: wersja `apple-icon` na pełnym tle, bez zaokrągleń.
-- [ ] `app/manifest.ts`: `name` „Budżet”, `short_name`, `start_url: "/"`, `display: "standalone"`, `background_color` i `theme_color` zgodne z `viewport`, `lang: "pl"`.
-- [ ] `metadata.appleWebApp` (`capable`, `statusBarStyle`, `title`) w `app/layout.tsx`.
-- [ ] Sprawdzić w buildzie: `/manifest.webmanifest`, linki w `<head>`, instalacja na Androidzie (Chrome) i iOS (Safari „Do ekranu początkowego”).
+- [x] PNG z `ikona.svg`: 192, 512, wersja `maskable` (motyw w bezpiecznym środku), `apple-icon` 180×180 i `app/icon.png`. SVG ma rozmycie (`feGaussianBlur`), którego `next/og` nie obsługuje, więc PNG powstają jednorazowo przez przeglądarkę (np. Chrome headless) i trafiają do repo. iOS nie bierze przezroczystości: wersja `apple-icon` na pełnym tle, bez zaokrągleń.
+- [x] `app/manifest.ts`: `name` „Budżet”, `short_name`, `start_url: "/"`, `display: "standalone"`, `background_color` i `theme_color` zgodne z `viewport`, `lang: "pl"`.
+- [x] `metadata.appleWebApp` (`capable`, `statusBarStyle`, `title`) w `app/layout.tsx`.
+- [ ] Sprawdzić w buildzie: `/manifest.webmanifest`, linki w `<head>`, instalacja na Androidzie (Chrome) i iOS (Safari „Do ekranu początkowego”). **Build sprawdzony 2026-10-27** (`next start`: manifest `application/manifest+json`, ikony 200, w `<head>` `manifest`, `icon`, `apple-touch-icon`, `apple-mobile-web-app-title`/`-status-bar-style`, `mobile-web-app-capable`). **Zostaje instalacja na telefonach** (do fazy O).
+- **Decyzje (2026-10-27):** PNG generuje `design/mobile/render-icons.sh` (Chrome headless, przezroczyste tło). Wariant `ikona-pelna.svg` (bez `rx`) dla `maskable` i `apple-icon`; motyw mieści się w strefie bezpiecznej (najdalszy róg ok. 185 px od środka przy promieniu 205 px), więc bez pomniejszania. `app/icon.png` 64 px, domyślny `app/favicon.ico` usunięty. `background_color` i `theme_color` = `THEME_COLORS.light` (jak `viewport`). `statusBarStyle: "default"` (treść nie wchodzi pod pasek statusu). Next 16 wypisuje `mobile-web-app-capable` zamiast `apple-mobile-web-app-capable`; iOS 16.4+ i tak bierze tryb `standalone` z manifestu. Test `lib/manifest.test.ts`: ikony z manifestu istnieją w `public/` i mają zadeklarowany rozmiar.
 
 ### Faza O: zamknięcie etapu
 
