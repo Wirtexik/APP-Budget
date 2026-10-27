@@ -1,6 +1,6 @@
 # Plan implementacji
 
-Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego kodu (2026-10-23). Każdy etap zamyka się przez `npm run typecheck`, `npm run lint`, `npm test` i `npm run build`, zanim zacznie się następny. Stan na 2026-10-23 (po fazie E): typecheck, lint i build czyste, 85/85 testów zielonych.
+Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego kodu (2026-10-23). Każdy etap zamyka się przez `npm run typecheck`, `npm run lint`, `npm test` i `npm run build`, zanim zacznie się następny. Stan na 2026-10-24 (po fazach F–H etapu 4): typecheck, lint i build czyste, 110/110 testów zielonych.
 
 ## Stan prac
 
@@ -10,7 +10,7 @@ Plan powstał na podstawie ARCHITECTURE.md, package.json i przeglądu całego ko
 | 1 | Wydzielenie warstwy danych z `Dashboard` | **Zrobione** (faza C). |
 | 2 | Filtrowanie transakcji | Częściowo: w Historii wyszukiwarka, menu „Filtry” (typ, zlecenia stałe, wiele kategorii) i „Sortuj” (data, kwota), stan w URL (faza D). Zostaje: kwoty, zakres dat. |
 | 3 | Zlecenia stałe | **Zrobione** (baza, logika, interfejs, `pg_cron`). Układ na telefon przechodzi do etapu 4. |
-| 4 | Interfejs mobilny | Do zrobienia. Fazy A–E zrobione, można zaczynać. |
+| 4 | Interfejs mobilny | W trakcie: fazy F–H zrobione (katalogi i tokeny, powłoka z nawigacją i wyborem okresu, formularz transakcji). Dalej faza I (Kokpit i lista z przesunięciem). Szczegóły: [ETAP4_MOBILE.md](ETAP4_MOBILE.md). |
 | 5 | Dopracowanie interfejsu | Do zrobienia. |
 
 Kolejność etapów 1, 2, 4, 5 zostaje taka jak była: warstwa danych przed rozdzieleniem PC i mobile, filtry przed oboma interfejsami, dopracowanie na końcu.
@@ -86,7 +86,7 @@ Zastąpiony przez fazy A i B powyżej. Z pierwotnej listy:
 - Limit 1000 wierszy: naprawione w `fetchYearlyTransactions` (faza B).
 - Dokładność kwot: sumy w groszach (faza B).
 - Strefy czasowe: sprawdzone, bez błędu w kodzie klienta (faza B, tylko dokumentacja).
-- Testy: Vitest, 79 testów (`recurring`, `filters`, `budget`, `categories`, `errors`, `transaction-input`, `dashboard-url`).
+- Testy: Vitest, 79 testów po fazie B (`recurring`, `filters`, `budget`, `categories`, `errors`, `transaction-input`, `dashboard-url`); po fazie H etapu 4 jest ich 110 (doszły `ui-variant`, `theme`, `category-style`, `amount-input`).
 
 ## Etap 1: warstwa danych
 
@@ -96,7 +96,7 @@ Zrobiony w fazie C. Cel: desktop i mobile mają różne widoki, ale jedno źród
 
 **Zrobione** (Historia, szczegóły w ARCHITECTURE.md, sekcja „Historia”):
 
-- Logika w `lib/filters.ts` (czysty TypeScript, testy w `lib/filters.test.ts`), pasek w `components/dashboard/history-filters.tsx`.
+- Logika w `lib/filters.ts` (czysty TypeScript, testy w `lib/filters.test.ts`), pasek w `components/desktop/history-filters.tsx`.
 - Wyszukiwarka od pierwszej litery, w opisie i nazwie kategorii. Dopasowuje tylko początki wyrazów, bez wielkości liter i polskich znaków.
 - Menu „Filtry” (`components/ui/dropdown-menu.tsx`): typ Uznania/Obciążenia, „Zlecenia stałe” (łączy się z typem) i wiele kategorii, z licznikiem na przycisku. Dawny `transaction-type-filter.tsx` jest usunięty.
 - Menu „Sortuj”: data i kwota, rosnąco i malejąco. Nic nie zaznaczone oznacza kolejność domyślną.
@@ -119,7 +119,7 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 
 - Baza: migracja `supabase/migrations/20261018120000_recurring_rules.sql` (tabela `recurring_rules`, `transactions.recurring_rule_id`, RLS, RPC `materialize_recurring()` i `upcoming_recurring()`).
 - Logika: `lib/recurring.ts` (typy, presety, walidacja, opisy) i `lib/recurring-queries.ts` (CRUD, wstrzymanie, RPC), z testami.
-- Interfejs: zakładka „Zlecenia” w `components/recurring/` (lista, formularz dodawania i edycji, wstrzymanie i wznowienie, usuwanie, „Nadchodzące” na 30 dni).
+- Interfejs: zakładka „Zlecenia” w `components/desktop/recurring/` (lista, formularz dodawania i edycji, wstrzymanie i wznowienie, usuwanie, „Nadchodzące” na 30 dni).
 - Wykonywanie: `materializeRecurring()` przy otwarciu aplikacji, przed pierwszym pobraniem danych, oraz po każdej zmianie zlecenia.
 - Wykonane transakcje oznaczone ikoną zlecenia w tabelach.
 - `pg_cron` raz dziennie o 23:05 UTC: migracja `supabase/migrations/20261023120000_recurring_cron.sql`. Wywołanie przy otwarciu aplikacji zostaje jako zabezpieczenie.
@@ -130,10 +130,10 @@ Szczegóły działania są w ARCHITECTURE.md (baza, sekcja „Zlecenia”, struk
 
 ## Etap 4: PC i mobile
 
-Zaczynamy dopiero po fazach A–E.
+Program wdrożenia (wymagania, fazy F–O): [ETAP4_MOBILE.md](ETAP4_MOBILE.md). Zrobione fazy F–H (2026-10-24), klawiatura kwoty sprawdzona na iOS i Androidzie (zostaje systemowa).
 
-- **Struktura:** wybór wersji po stronie klienta (`useUiVariant` w `AppShell`, faza E): w miejsce drugiego `<Dashboard>` wchodzi `<MobileApp>`. Wspólne `lib/`, provider i hooki z fazy C; osobne komponenty w `components/desktop/` i `components/mobile/`. Obecne `components/dashboard/` przechodzi do `components/desktop/`.
-- **Przełącznik ręczny** „Automatycznie / Komputerowa / Mobilna”: `setOverride` z `useUiVariant` (zapis w `localStorage`).
+- **Struktura:** wybór wersji po stronie klienta (`useUiVariant` w `AppShell`, faza E): w miejsce drugiego `<Dashboard>` wchodzi `<MobileApp>`. Wspólne `lib/`, provider i hooki z fazy C; osobne komponenty w `components/desktop/` i `components/mobile/`. Dawne `components/dashboard/` jest już w `components/desktop/` (faza F).
+- **Przełącznik ręczny** „Automatycznie / Komputerowa / Mobilna”: `setOverride` z `useUiVariant` (zapis w `localStorage`). Do fazy M w mobilnym ekranie „Więcej” jest tymczasowy przycisk „Wersja komputerowa”.
 - **Interfejs mobilny, całkiem inny niż desktopowy:**
   - dolna nawigacja (Kokpit, Historia, „+”, Zlecenia, Raporty), z odstępem na `safe-area`;
   - pełnoekranowy formularz dodawania z dużym polem kwoty (na `useTransactionForm`);
@@ -147,12 +147,15 @@ Zaczynamy dopiero po fazach A–E.
 
 Spójne stany ładowania (szkielety), puste stany, komunikaty błędów, dostępność (focus, kontrast). Tryb ciemny działa od fazy E; zostaje przejrzenie kolorów w ciemnym motywie (gradienty kart, wykres, kolory kwot). Szczegóły do ustalenia po zobaczeniu aplikacji na obu urządzeniach.
 
+- **Zmiana typu przy edycji transakcji na desktopie** (decyzja z fazy H etapu 4, 2026-10-24). W mobile edycja pozwala przełączyć Wydatek/Przychód: zmiana typu czyści kategorię (zapis zablokowany, dopóki nie wybierze się nowej), powrót do pierwotnego typu przywraca pierwotną kategorię. Desktopowe `EditTransactionDialog` nadal trzyma typ wpisu (lista kategorii tylko tego typu), więc wersje różnią się w tej jednej rzeczy. Do wyrównania: przełącznik typu w oknie edycji na `setType` z `useTransactionForm` (hook już to obsługuje). Skutek uboczny jak w mobile: wpis ze zlecenia stałego może zmienić typ niezależnie od zlecenia.
+- **Potwierdzenie usunięcia kategorii na desktopie** (decyzja z fazy M etapu 4, 2026-10-27). W mobile „Usuń” przy kategorii otwiera panel z potwierdzeniem, na desktopie kosz w `CategoryForm` usuwa od razu (blokada dla używanych kategorii działa w obu). Do wyrównania: okno potwierdzenia na desktopie na tym samym `useRemoveCategory`.
+
 ## Decyzje do podjęcia
 
 1. ~~Wykonywanie zleceń~~ Rozstrzygnięte: nadrabianie przy otwarciu aplikacji + `pg_cron` raz dziennie.
 2. ~~Wykrywanie urządzenia~~ Rozstrzygnięte (faza E): po stronie klienta, szerokość ekranu + ręczny wybór w `localStorage`, bez `proxy.ts`.
 3. ~~Dane roczne~~ Rozstrzygnięte: partie po `range()`, bez zmian w bazie.
 4. ~~Tryb ciemny~~ Rozstrzygnięte (faza E): systemowy z przełącznikiem.
-5. ~~Zakres lat w selektorze~~ Na razie sztywny; wrócić w etapie 4.
+5. ~~Zakres lat w selektorze~~ Rozstrzygnięte w etapie 4 (faza G): zostaje sztywny `YEAR_ITEMS`, strzałki okresu gasną na końcu zakresu.
 6. ~~Testy~~ Vitest jest dodany, `lib/budget.ts` i `lib/categories.ts` pokryte w fazie B.
 7. ~~Precyzja kwot zleceń~~ Rozstrzygnięte: tylko limit `MAX_AMOUNT` w kodzie, bez migracji.

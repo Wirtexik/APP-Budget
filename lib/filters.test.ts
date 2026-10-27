@@ -3,6 +3,8 @@ import type { Category, Transaction } from "@/lib/budget";
 import {
   EMPTY_FILTERS,
   categoryGroups,
+  clearDrawerFilters,
+  drawerFilterCount,
   filterTransactions,
   filtersFromParams,
   hasActiveFilters,
@@ -236,5 +238,34 @@ describe("filtry w URL", () => {
       ...EMPTY_FILTERS,
       categoryIds: ["fun", "food"],
     });
+  });
+});
+
+describe("filtry w panelu mobilnym", () => {
+  it("znaczek liczy menu i sortowanie inne niż domyślne", () => {
+    expect(drawerFilterCount(EMPTY_FILTERS)).toBe(0);
+    expect(drawerFilterCount({ ...EMPTY_FILTERS, query: "kino" })).toBe(0);
+    expect(drawerFilterCount({ ...EMPTY_FILTERS, sort: "date_desc" })).toBe(0);
+    expect(
+      drawerFilterCount({
+        ...EMPTY_FILTERS,
+        type: "wydatek",
+        recurring: true,
+        categoryIds: ["fun", "food"],
+        sort: "amount_asc",
+      })
+    ).toBe(5);
+  });
+
+  it("„Wyczyść wszystko” zostawia wyszukiwanie", () => {
+    expect(
+      clearDrawerFilters({
+        type: "przychod",
+        recurring: true,
+        categoryIds: ["fun"],
+        query: "kino",
+        sort: "date_asc",
+      })
+    ).toEqual({ ...EMPTY_FILTERS, query: "kino" });
   });
 });

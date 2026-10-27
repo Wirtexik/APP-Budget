@@ -6,6 +6,11 @@
 // poprzedniej zakładki. Okres i filtry podmieniają bieżący wpis (`replaceState`),
 // żeby przeglądanie miesięcy czy wpisywanie liter nie zaśmiecało historii.
 //
+// Nakładki wersji mobilnej (formularz, „Więcej”) też dodają wpis, ze znacznikiem
+// w `history.state`. Zamknięcie cofa wtedy historię (`history.back()`), więc
+// systemowe „Wstecz” i przycisk zamknięcia działają tak samo. Bez znacznika
+// (np. odświeżona strona z `?formularz=nowy`) parametr znika przez `replaceState`.
+//
 // URL czytamy przez `useSyncExternalStore`, a nie `useSearchParams`: Next
 // aktualizuje `useSearchParams` po `pushState` w `startTransition`, więc pole
 // wyszukiwania sterowane z URL mogłoby gubić litery przy szybkim pisaniu.
@@ -19,6 +24,8 @@ import {
   dashboardSearch,
   parseDashboardSearch,
   type DashboardUrlState,
+  type MobileForm,
+  type Screen,
   type View,
 } from "@/lib/dashboard-url";
 import type { HistoryFilters } from "@/lib/filters";
@@ -39,7 +46,17 @@ function subscribe(listener: () => void) {
 const getSearch = () => window.location.search;
 const getServerSearch = () => "";
 
-function update(patch: Partial<DashboardUrlState>, mode: "push" | "replace") {
+const OVERLAY_STATE = { overlay: true } as const;
+
+let closing = false;
+
+const isOverlayEntry = () =>
+  (window.history.state as { overlay?: unknown } | null)?.overlay === true;
+
+function update(
+  patch: Partial<DashboardUrlState>,
+  mode: "push" | "replace" | "overlay"
+) {
   // Bieżący stan bierzemy z URL, nie z renderu – kilka zmian pod rząd
   // (np. szybkie pisanie) nie nadpisze się starszymi wartościami.
   const today = currentPeriod();
@@ -48,8 +65,13 @@ function update(patch: Partial<DashboardUrlState>, mode: "push" | "replace") {
   if (search === window.location.search) return;
 
   const url = `${window.location.pathname}${search}${window.location.hash}`;
-  if (mode === "push") window.history.pushState(null, "", url);
-  else window.history.replaceState(null, "", url);
+  // Przekazujemy tylko własny znacznik: Next sam dokleja swój stan, a gdyby
+  // dostał go od nas (`__NA`), pominąłby aktualizację routera.
+  if (mode === "replace") {
+    window.history.replaceState(isOverlayEntry() ? OVERLAY_STATE : null, "", url);
+  } else {
+    window.history.pushState(mode === "overlay" ? OVERLAY_STATE : null, "", url);
+  }
   listeners.forEach((listener) => listener());
 }
 
@@ -57,6 +79,10 @@ export interface DashboardUrl extends DashboardUrlState {
   setView: (view: View) => void;
   selectPeriod: (period: Period) => void;
   setFilters: (filters: HistoryFilters) => void;
+  openForm: (form: MobileForm) => void;
+  openScreen: (screen: Screen) => void;
+  /** Zamyka formularz i ekran „Więcej”. */
+  closeOverlay: () => void;
 }
 
 export function useDashboardUrl(): DashboardUrl {
@@ -73,5 +99,35 @@ export function useDashboardUrl(): DashboardUrl {
     []
   );
 
-  return { ...state, setView, selectPeriod, setFilters };
+  const openForm = useCallback(
+    (form: MobileForm) => update({ form, screen: null }, "overlay"),
+    []
+  );
+  const openScreen = useCallback(
+    (screen: Screen) => update({ screen, form: null }, "overlay"),
+    []
+  );
+  const closeOverlay = useCallback(() => {
+    // `history.back()` działa asynchronicznie; drugie zamknięcie przed
+    // `popstate` (np. wpis zniknął z listy i jednocześnie skończył się zapis)
+    // cofnęłoby o jeden wpis za dużo.
+    if (closing) return;
+    if (isOverlayEntry()) {
+      closing = true;
+      window.addEventListener("popstate", () => (closing = false), { once: true });
+      window.history.back();
+    } else {
+      update({ form: null, screen: null }, "replace");
+    }
+  }, []);
+
+  return {
+    ...state,
+    setView,
+    selectPeriod,
+    setFilters,
+    openForm,
+    openScreen,
+    closeOverlay,
+  };
 }

@@ -54,6 +54,19 @@ export function valueForCategory(category: Category) {
   return preset ? defaultValue(preset) : userValue(category);
 }
 
+// Wartość już istniejącej kategorii o tej nazwie i typie (domyślnej albo
+// własnej), bez względu na wielkość liter i spacje; null, gdy takiej nie ma.
+// Szybkie dodawanie kategorii zaznacza wtedy istniejącą zamiast tworzyć duplikat.
+export function existingCategoryValue(
+  categories: Category[],
+  target: CategoryRef
+): string | null {
+  const preset = DEFAULT_CATEGORIES.find((d) => sameCategory(d, target));
+  if (preset) return defaultValue(preset);
+  const own = categories.find((c) => sameCategory(c, target));
+  return own ? userValue(own) : null;
+}
+
 // Wyjaśnienie, czemu nie można usunąć kategorii; null, gdy nic jej nie używa.
 export function categoryUsageMessage(usage: {
   transactions: number;

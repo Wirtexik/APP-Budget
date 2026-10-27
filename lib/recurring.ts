@@ -4,7 +4,7 @@
 // supabase/migrations/20261018120000_recurring_rules.sql). Ten plik celowo nie
 // powtarza algorytmu dat z SQL – kolejne terminy podaje RPC `upcoming_recurring`.
 
-import { MAX_AMOUNT, dateKey, formatDate, type Id } from "@/lib/budget";
+import { MAX_AMOUNT, dateKey, formatDate, plural, type Id } from "@/lib/budget";
 
 export type Frequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -226,13 +226,6 @@ export function ruleStatus(
 ): RuleStatus {
   if (rule.next_run_date === null) return "finished";
   return rule.is_active ? "active" : "paused";
-}
-
-function plural(n: number, one: string, few: string, many: string) {
-  if (n === 1) return one;
-  const last = n % 10;
-  const lastTwo = n % 100;
-  return last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14) ? few : many;
 }
 
 const UNIT: Record<Frequency, [string, string, string]> = {

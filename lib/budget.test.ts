@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_AMOUNT,
+  budgetUsage,
   computeTotals,
   fromGrosze,
   monthRange,
   parseAmount,
+  plural,
   pluralEntries,
+  shiftPeriod,
   toGrosze,
   yearRange,
   type Category,
@@ -148,5 +151,75 @@ describe("pluralEntries", () => {
     expect(pluralEntries(14)).toBe("wpisów");
     expect(pluralEntries(22)).toBe("wpisy");
     expect(pluralEntries(0)).toBe("wpisów");
+  });
+});
+
+describe("shiftPeriod", () => {
+  // Zakres lat selektora zależy od dzisiejszej daty: 5 wstecz … następny.
+  const thisYear = new Date().getFullYear();
+
+  it("przesuwa w obrębie roku", () => {
+    expect(shiftPeriod({ year: thisYear, month: 5 }, 1)).toEqual({ year: thisYear, month: 6 });
+    expect(shiftPeriod({ year: thisYear, month: 5 }, -1)).toEqual({ year: thisYear, month: 4 });
+  });
+
+  it("przechodzi przez granicę roku", () => {
+    expect(shiftPeriod({ year: thisYear, month: 11 }, 1)).toEqual({ year: thisYear + 1, month: 0 });
+    expect(shiftPeriod({ year: thisYear, month: 0 }, -1)).toEqual({ year: thisYear - 1, month: 11 });
+  });
+
+  it("poza zakresem lat zwraca null", () => {
+    expect(shiftPeriod({ year: thisYear + 1, month: 11 }, 1)).toBeNull();
+    expect(shiftPeriod({ year: thisYear - 5, month: 0 }, -1)).toBeNull();
+    expect(shiftPeriod({ year: thisYear - 5, month: 0 }, 1)).toEqual({ year: thisYear - 5, month: 1 });
+  });
+});
+
+describe("budgetUsage", () => {
+  it("liczy procent i resztę", () => {
+    expect(budgetUsage({ income: 8200, expenses: 4749.8, balance: 3450.2 })).toEqual({
+      percent: 58,
+      remaining: 3450.2,
+      exceeded: false,
+    });
+  });
+
+  it("wydatki równe przychodom lub większe to przekroczenie", () => {
+    expect(budgetUsage({ income: 100, expenses: 100, balance: 0 }).exceeded).toBe(true);
+    expect(budgetUsage({ income: 100, expenses: 150, balance: -50 })).toEqual({
+      percent: 150,
+      remaining: -50,
+      exceeded: true,
+    });
+  });
+
+  it("bez przychodów nie ma procentu", () => {
+    expect(budgetUsage({ income: 0, expenses: 20, balance: -20 })).toEqual({
+      percent: null,
+      remaining: -20,
+      exceeded: true,
+    });
+  });
+
+  it("pusty okres nie jest przekroczeniem", () => {
+    expect(budgetUsage({ income: 0, expenses: 0, balance: 0 })).toEqual({
+      percent: null,
+      remaining: 0,
+      exceeded: false,
+    });
+  });
+});
+
+describe("plural", () => {
+  it("odmienia dowolny rzeczownik", () => {
+    expect([0, 1, 2, 5, 12, 22, 25].map((n) => plural(n, "wynik", "wyniki", "wyników"))).toEqual([
+      "wyników",
+      "wynik",
+      "wyniki",
+      "wyników",
+      "wyników",
+      "wyniki",
+      "wyników",
+    ]);
   });
 });

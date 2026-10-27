@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { categoryUsageMessage, sameCategory } from "@/lib/categories";
+import type { Category } from "@/lib/budget";
+import {
+  categoryUsageMessage,
+  existingCategoryValue,
+  sameCategory,
+} from "@/lib/categories";
 
 describe("sameCategory", () => {
   it("porównuje bez wielkości liter i spacji na brzegach, po obu stronach", () => {
@@ -33,5 +38,24 @@ describe("categoryUsageMessage", () => {
     expect(categoryUsageMessage({ transactions: 2, rules: 1 })).toBe(
       "Ma przypisane transakcje (2) i zlecenia stałe (1). Najpierw usuń transakcje lub przenieś je do innej kategorii, a usuń zlecenia lub zmień im kategorię w zakładce „Zlecenia”."
     );
+  });
+});
+
+describe("existingCategoryValue", () => {
+  const own: Category = { id: "c1", name: "Kot", type: "wydatek" };
+
+  it("rozpoznaje kategorię domyślną bez wielkości liter i spacji", () => {
+    expect(existingCategoryValue([], { name: " jedzenie ", type: "wydatek" })).toBe(
+      "default:wydatek:Jedzenie"
+    );
+  });
+
+  it("rozpoznaje własną kategorię", () => {
+    expect(existingCategoryValue([own], { name: "KOT", type: "wydatek" })).toBe("user:c1");
+  });
+
+  it("null dla nowej nazwy albo innego typu", () => {
+    expect(existingCategoryValue([own], { name: "Pies", type: "wydatek" })).toBeNull();
+    expect(existingCategoryValue([own], { name: "Kot", type: "przychod" })).toBeNull();
   });
 });

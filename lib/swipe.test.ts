@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+
+import { clampOffset, settleOffset, swipeAxis } from "@/lib/swipe";
+
+describe("swipeAxis", () => {
+  it("drobny ruch nie rozstrzyga kierunku", () => {
+    expect(swipeAxis(0, 0)).toBe("pending");
+    expect(swipeAxis(-7, 5)).toBe("pending");
+  });
+
+  it("przeważający ruch poziomy to przesunięcie", () => {
+    expect(swipeAxis(-20, 5)).toBe("horizontal");
+    expect(swipeAxis(12, -3)).toBe("horizontal");
+  });
+
+  it("pionowy ruch i remis to przewijanie", () => {
+    expect(swipeAxis(3, 20)).toBe("vertical");
+    expect(swipeAxis(-10, -10)).toBe("vertical");
+  });
+});
+
+describe("clampOffset", () => {
+  it("trzyma przesunięcie między szerokością akcji a zerem", () => {
+    expect(clampOffset(30, 128)).toBe(0);
+    expect(clampOffset(-60, 128)).toBe(-60);
+    expect(clampOffset(-300, 128)).toBe(-128);
+  });
+});
+
+describe("settleOffset", () => {
+  it("przyciąga do zera poniżej progu", () => {
+    expect(settleOffset(0, 128)).toBe(0);
+    expect(settleOffset(-50, 128)).toBe(0);
+    expect(settleOffset(20, 128)).toBe(0);
+  });
+
+  it("przyciąga do szerokości akcji powyżej progu", () => {
+    expect(settleOffset(-52, 128)).toBe(-128);
+    expect(settleOffset(-500, 128)).toBe(-128);
+  });
+});

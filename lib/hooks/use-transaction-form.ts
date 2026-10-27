@@ -58,12 +58,13 @@ export function useTransactionForm(mode: TransactionFormMode) {
         categoryValue: category ? valueForCategory(category) : null,
         description: transaction.description ?? "",
       },
-      // Edycja zachowuje typ wpisu: wydatek zostaje wydatkiem, a przychód przychodem.
+      // Typ wynika z kategorii; desktopowa edycja go nie zmienia (bez `setType`).
       type: category?.type ?? "wydatek",
     };
   });
 
   const [fields, setFields] = useState<Fields>(initial.fields);
+  const [type, setTypeState] = useState<CategoryType>(initial.type);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -72,8 +73,24 @@ export function useTransactionForm(mode: TransactionFormMode) {
     (value: Fields[K]) =>
       setFields((f) => ({ ...f, [key]: value }));
 
+  // Zmiana typu (przełącznik Wydatek/Przychód w mobile) czyści kategorię, bo ta
+  // należy do typu; kwota, data i opis zostają. Przy edycji powrót do pierwotnego
+  // typu przywraca pierwotną kategorię.
+  function setType(next: CategoryType) {
+    if (next === type) return;
+    setTypeState(next);
+    setFields((f) => ({
+      ...f,
+      categoryValue:
+        mode.kind === "edit" && next === initial.type
+          ? initial.fields.categoryValue
+          : null,
+    }));
+  }
+
   function reset() {
     setFields(mode.kind === "create" ? emptyFields() : initial.fields);
+    setTypeState(initial.type);
     setError(null);
   }
 
@@ -135,7 +152,8 @@ export function useTransactionForm(mode: TransactionFormMode) {
     setCategoryValue: set("categoryValue"),
     setDescription: set("description"),
     /** Typ kategorii, które pokazuje select. */
-    type: initial.type,
+    type,
+    setType,
     categories,
     error,
     saving,

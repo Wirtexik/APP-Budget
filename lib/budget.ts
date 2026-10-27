@@ -119,14 +119,15 @@ export const toGrosze = (amount: number | string) =>
 
 export const fromGrosze = (grosze: number) => grosze / 100;
 
-export function pluralEntries(n: number) {
-  if (n === 1) return "wpis";
+// Polska odmiana po liczebniku: 1 wpis, 2–4 wpisy (bez 12–14), 5 wpisów.
+export function plural(n: number, one: string, few: string, many: string) {
+  if (n === 1) return one;
   const last = n % 10;
   const lastTwo = n % 100;
-  return last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)
-    ? "wpisy"
-    : "wpisów";
+  return last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14) ? few : many;
 }
+
+export const pluralEntries = (n: number) => plural(n, "wpis", "wpisy", "wpisów");
 
 export const MONTH_NAMES = [
   "Styczeń",
@@ -167,6 +168,14 @@ export const YEAR_ITEMS = Array.from({ length: 7 }, (_, i) => {
   return { value: String(year), label: String(year) };
 });
 
+// Okres przesunięty o `delta` miesięcy (przez granicę roku). `null`, gdy wynik
+// wypada poza zakres lat selektora – strzałka w nagłówku wtedy gaśnie.
+export function shiftPeriod({ year, month }: Period, delta: number): Period | null {
+  const index = year * 12 + month + delta;
+  const next = { year: Math.floor(index / 12), month: ((index % 12) + 12) % 12 };
+  return YEAR_ITEMS.some((item) => item.value === String(next.year)) ? next : null;
+}
+
 export const TYPE_ITEMS: { value: CategoryType; label: string }[] = [
   { value: "wydatek", label: "Wydatek" },
   { value: "przychod", label: "Przychód" },
@@ -194,5 +203,24 @@ export function computeTotals(
     income: fromGrosze(income),
     expenses: fromGrosze(expenses),
     balance: fromGrosze(income - expenses),
+  };
+}
+
+export interface BudgetUsage {
+  /** Zaokrąglony procent przychodów wydanych w okresie; `null`, gdy przychodów brak. */
+  percent: number | null;
+  /** Ile zostało (ujemne po przekroczeniu) – to samo co `balance`. */
+  remaining: number;
+  /** Budżet wyczerpany lub przekroczony (wydatki >= przychody); bez ruchu – `false`. */
+  exceeded: boolean;
+}
+
+// Wykorzystanie budżetu – wspólne dla `BudgetGauge` (desktop) i paska w Kokpicie.
+export function budgetUsage({ income, expenses, balance }: Totals): BudgetUsage {
+  const hasActivity = income > 0 || expenses > 0;
+  return {
+    percent: income > 0 ? Math.round((toGrosze(expenses) / toGrosze(income)) * 100) : null,
+    remaining: balance,
+    exceeded: hasActivity && toGrosze(expenses) >= toGrosze(income),
   };
 }

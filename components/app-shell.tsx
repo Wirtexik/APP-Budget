@@ -1,7 +1,8 @@
 "use client";
 
 import { useSession } from "@/components/auth/session-gate";
-import { Dashboard } from "@/components/dashboard/dashboard";
+import { Dashboard } from "@/components/desktop/dashboard";
+import { MobileApp } from "@/components/mobile/mobile-app";
 import { emailToLogin } from "@/lib/auth";
 import { BudgetDataProvider } from "@/lib/hooks/budget-data";
 import { useDashboardUrl } from "@/lib/hooks/use-dashboard-url";
@@ -22,9 +23,8 @@ export function AppShell() {
       period={url.period}
       onPeriodChange={url.selectPeriod}
     >
-      {/* Wersja mobilna powstanie w etapie 4; do tego czasu obie to Dashboard. */}
       {variant === "mobile" ? (
-        <Dashboard login={login} url={url} />
+        <MobileApp login={login} url={url} />
       ) : (
         <Dashboard login={login} url={url} />
       )}

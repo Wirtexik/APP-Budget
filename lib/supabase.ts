@@ -17,3 +17,10 @@ export function getSupabase(): SupabaseClient {
   client = createClient(url, anonKey);
   return client;
 }
+
+// Przekierowanie na /login robi listener `onAuthStateChange` w SessionGate –
+// jedno miejsce dla obu wersji i dla wylogowania w innej karcie. `signOut()`
+// usuwa sesję lokalnie nawet przy błędzie sieci, więc zdarzenie zawsze przyjdzie.
+export function signOut() {
+  void getSupabase().auth.signOut();
+}

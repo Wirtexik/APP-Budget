@@ -19,6 +19,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Budżet",
   description: "Aplikacja do zarządzania budżetem",
+  // Ekran początkowy iOS. `default`, nie `black-translucent`: treść nie wchodzi
+  // pod pasek statusu. Ikona to app/apple-icon.png.
+  appleWebApp: {
+    capable: true,
+    title: "Budżet",
+    statusBarStyle: "default",
+  },
 };
 
 // `width=device-width, initial-scale=1` Next dodaje sam. `viewportFit: "cover"`

@@ -59,57 +59,96 @@ Zasady, na których opiera się cała aplikacja:
 - Akordeon „Struktura transakcji”: Wydatki/Przychody → kategorie → transakcje.
 - Tryb „Rok” bierze rok z globalnego filtra i ignoruje miesiąc. Dane roczne pobierają się w tle (`fetchYearlyTransactions`).
 
-**Zakładki** są sterowane z URL. Ukryta zakładka zostaje zamontowana od pierwszego otwarcia (`keepMounted` po wizycie), więc suwak w Raportach i niezapisane formularze przetrwają przełączanie, a dane zleceń i roku nadal pobierają się leniwie.
+**Zakładki** są sterowane z URL. Ukryta zakładka zostaje zamontowana od pierwszego otwarcia (`useVisited`, w desktopie przez `keepMounted`), więc suwak w Raportach i niezapisane formularze przetrwają przełączanie, a dane zleceń i roku nadal pobierają się leniwie.
 
 **Motyw** – przycisk `ThemeToggle` w nagłówku (logika w `lib/theme.ts`, hook `useTheme`): jedno kliknięcie przełącza „Systemowy” (ikona księżyca, domyślny, idzie za `prefers-color-scheme`) ↔ „Jasny” (ikona słońca, zawsze jasny). Osobnej opcji „Ciemny” nie ma. „Jasny” zapisuje się w `localStorage` (`motyw` = `light`), brak wpisu = systemowy. Ciemny motyw to klasa `dark` na `<html>`: ustawia ją skrypt w `<head>` przed renderem (bez mignięcia jasnego ekranu), a potem `ThemeSync`. Komunikaty (`Toaster`) i kolor paska przeglądarki (`theme-color`) idą za motywem.
 
-**Wybór wersji** (komputerowa / mobilna) – po stronie klienta, bez `proxy.ts` i User-Agent (`lib/ui-variant.ts`, hook `useUiVariant`). Ręczny wybór w `localStorage` (`wersja`) ma pierwszeństwo; bez niego decyduje `matchMedia("(max-width: 767px)")`, na bieżąco (obrót tabletu, zwężenie okna). Powód: sesja Supabase jest w przeglądarce, więc pulpit i tak renderuje się dopiero po jej sprawdzeniu, a serwer nie ma nic do pokazania wcześniej; `/` zostaje statyczne. Grupy tras `(desktop)`/`(mobile)` pod tym samym `/` odpadają (konflikt ścieżek). Do etapu 4 obie wersje renderują `Dashboard`; przełącznik ręczny dojdzie razem z wersją mobilną.
+**Wybór wersji** (komputerowa / mobilna) – po stronie klienta, bez `proxy.ts` i User-Agent (`lib/ui-variant.ts`, hook `useUiVariant`). Ręczny wybór w `localStorage` (`wersja`) ma pierwszeństwo; bez niego decyduje `matchMedia("(max-width: 767px)")`, na bieżąco (obrót tabletu, zwężenie okna). Powód: sesja Supabase jest w przeglądarce, więc pulpit i tak renderuje się dopiero po jej sprawdzeniu, a serwer nie ma nic do pokazania wcześniej; `/` zostaje statyczne. Grupy tras `(desktop)`/`(mobile)` pod tym samym `/` odpadają (konflikt ścieżek). Wersja mobilna to `MobileApp` (`components/mobile/`); jej tokeny wyglądu (`--primary`, `--background`, `--radius`, `--income`, `--glass`, `--glow`…) są w `app/globals.css` pod `[data-ui="mobile"]` i `.dark [data-ui="mobile"]`, więc desktop się nie zmienia. Panele `Drawer` renderują się w portalu, dlatego sam popup też ma `data-ui="mobile"`. Formularz i ekran „Więcej” to nakładki sterowane z URL (`?formularz=nowy|<uuid>|zlecenie|zlecenie-<uuid>`, `?ekran=wiecej`): otwarcie robi `pushState` ze znacznikiem `{ overlay: true }` w `history.state`, zamknięcie `history.back()`, więc systemowe „Wstecz” zamyka nakładkę zamiast wychodzić z aplikacji. Bez znacznika (odświeżona strona) parametr znika przez `replaceState`. Do `history.*State` przekazujemy tylko własny znacznik – Next dokleja swój stan sam, a z `__NA` od nas pominąłby aktualizację routera. Desktop czyści oba parametry. Przełącznik „Automatycznie / Komputerowa / Mobilna” (`UI_CHOICES`) jest w ekranie „Więcej” i w menu konta na desktopie (`AccountMenu`). `closeOverlay` jest odporne na podwójne wywołanie (np. wpis zniknął z listy i jednocześnie skończył się zapis): drugie `history.back()` przed `popstate` jest pomijane.
+
+**Formularz transakcji w mobile** (`components/mobile/transaction-form/`) – na `useTransactionForm`, jak formularze desktopowe. Kwota w polu tekstowym z `inputMode="decimal"` (klawiatura systemowa, sprawdzona na iOS i Androidzie 2026-10-24); `sanitizeAmountInput` zamienia kropkę na przecinek i przepuszcza tylko cyfry, jeden przecinek i 2 miejsca po nim, zakres sprawdza `parseAmount` przy zapisie. Przełącznik Wydatek/Przychód działa także w edycji (`setType`): zmiana typu czyści kategorię, powrót przywraca pierwotną; desktop nadal trzyma typ wpisu (wyrównanie w PLAN.md, etap 5). „+ Nowa” kategoria: `insertCategory` zwraca id, więc nowa kategoria jest od razu zaznaczona; nazwa istniejącej (`existingCategoryValue`) tylko ją zaznacza. Przycisk zapisu w stopce `FullScreen` podnosi się nad klawiaturę iOS (`useKeyboardInset`, `visualViewport`). Edycja otwiera się tylko dla wpisu z pobranego miesiąca, inaczej parametr `formularz` znika.
 
 ## Struktura katalogów
 
 ```
 app/
   layout.tsx            layout (Server Component): czcionki (latin + latin-ext), viewport
-                        (viewport-fit=cover, theme-color), skrypt motywu, <ThemeSync />, <Toaster />
+                        (viewport-fit=cover, theme-color), appleWebApp, skrypt motywu, <ThemeSync />,
+                        <Toaster />
   page.tsx              Server Component: <SessionGate><AppShell /></SessionGate>
   login/page.tsx        logowanie loginem (dokleja @budzet.local)
+  manifest.ts           manifest PWA (/manifest.webmanifest): standalone, kolory z THEME_COLORS
+  icon.png, apple-icon.png  ikona karty (64 px) i ekranu początkowego iOS (180 px, pełne tło)
+public/icons/           ikony PWA: 192, 512 i maskable 512 (z design/mobile/render-icons.sh)
 components/
   auth/session-gate.tsx bramka sesji (klient): sprawdzenie sesji, listener, przekierowanie
                         na /login; sesja dla dzieci przez useSession()
   app-shell.tsx         wspólna podstawa obu wersji: useDashboardUrl + BudgetDataProvider,
                         wybór wersji (useUiVariant)
-  dashboard/            wersja komputerowa: dashboard.tsx (zakładki, dialogi edycji/usuwania)
+  desktop/              wersja komputerowa: dashboard.tsx (zakładki, dialogi edycji/usuwania)
                         + formularze, dialogi, tabele, karty, history-filters.tsx (pasek
-                        Historii), reports-tab.tsx, budget-gauge.tsx
-  recurring/            zakładka „Zlecenia”: recurring-tab.tsx (dialogi), lista zleceń,
+                        Historii), reports-tab.tsx
+    recurring/          zakładka „Zlecenia”: recurring-tab.tsx (dialogi), lista zleceń,
                         „Nadchodzące”, formularz, dialog usuwania
-  shared/               wspólne dla obu wersji: signed-amount.tsx, theme-toggle.tsx
+  mobile/               wersja mobilna (etap 4): mobile-app.tsx (korzeń z data-ui="mobile",
+                        widoki, pasek błędu/wczytywania, nakładki), mobile-header.tsx
+                        („‹ miesiąc ›”, awatar, tytuł), period-drawer.tsx (panel okresu),
+                        bottom-nav.tsx, full-screen.tsx (ekran na pełnym ekranie, stopka
+                        nad klawiaturą), delete-transaction-drawer.tsx (potwierdzenie)
+    transaction-form/   formularz transakcji na pełnym ekranie: przełącznik typu, pole
+                        kwoty (amount-field), kafelki kategorii, panel „+ Nowa” kategoria
+    more/               ekran „Więcej”: konto, kategorie (panel dodawania/edycji,
+                        potwierdzenie usunięcia), wygląd, wersja interfejsu, wylogowanie
+    reports/            Raporty: Miesiąc/Rok, oponka budżetu, report-structure.tsx
+                        (typ → kategorie → wpisy, zarazem legenda)
+  shared/               wspólne dla obu wersji, niezależne od układu: signed-amount.tsx,
+                        theme-toggle.tsx, budget-gauge.tsx (oponka budżetu w Raportach);
+                        trafia tu tylko to, czego używają obie wersje
   ui/                   komponenty shadcn/ui (nie edytować ręcznie bez potrzeby),
-                        m.in. dropdown-menu.tsx (Menu z Base UI)
+                        m.in. dropdown-menu.tsx (Menu z Base UI), drawer.tsx (panel z dołu,
+                        Drawer z Base UI, z uchwytem i safe-area)
 lib/
   budget.ts             typy, formatowanie, okres (Period, currentPeriod), zakresy dat,
                         kwoty i sumy w groszach (parseAmount, computeTotals)
-  categories.ts         kategorie domyślne, listy wyboru, komunikat o blokadzie usunięcia
+  categories.ts         kategorie domyślne, listy wyboru, komunikat o blokadzie usunięcia,
+                        istniejąca kategoria o nazwie (existingCategoryValue)
+  amount-input.ts       czyszczenie wpisywanej kwoty w mobile (przecinek, 2 miejsca)
+  report-groups.ts      Raporty: grupowanie wpisów wg typu i kategorii (sumy w groszach),
+                        udział w procentach (share); kolory nadaje widok
+  category-style.ts     ikona Lucide i kolor kategorii (mapa dla domyślnych, kolor z nazwy
+                        dla własnych); baza bez zmian
   queries.ts            zapytania do Supabase (dane miesiąca/roku, zapisy, usuwanie)
   recurring.ts          zlecenia stałe: typy, presety, walidacja formularza, opisy (czysta logika)
   recurring-queries.ts  zlecenia stałe: CRUD, wstrzymanie, RPC materialize/upcoming
   filters.ts            filtry i sortowanie Historii + zapis w URL (czysta logika)
-  dashboard-url.ts      stan widoku w URL: zakładka (VIEWS), okres, filtry (czysta logika)
+  dashboard-url.ts      stan widoku w URL: zakładka (VIEWS), okres, filtry, w mobile także
+                        formularz (`formularz`) i ekran „Więcej” (`ekran`) (czysta logika)
   transaction-input.ts  walidacja formularza transakcji (czysta logika)
   errors.ts             wspólne komunikaty błędów Supabase (errorMessage)
   theme.ts              motyw: wybór, rozwiązanie wg systemu, skrypt do <head>
-  ui-variant.ts         wersja interfejsu: ręczny wybór vs szerokość ekranu
+  ui-variant.ts         wersja interfejsu: ręczny wybór vs szerokość ekranu, opcje przełącznika
   hooks/
     budget-data.tsx     BudgetDataProvider + useBudgetData / useRecurringData / useYearlyData
-    use-transaction-form.ts  stan i zapis formularza transakcji (dodawanie i edycja)
-    use-dashboard-url.ts     stan widoku z URL (useSyncExternalStore, push/replace)
+    use-transaction-form.ts  stan i zapis formularza transakcji (dodawanie i edycja);
+                             `setType` (mobile) czyści kategorię, w edycji powrót ją przywraca
+    use-delete-transaction.ts  usuwanie transakcji z potwierdzeniem (desktop i mobile)
+    use-category-actions.ts  formularz kategorii (dodawanie/edycja) i usuwanie z blokadą
+                             dla używanych (desktop i mobile)
+    use-keyboard-inset.ts    wysokość klawiatury ekranowej (visualViewport, iOS)
+    use-dashboard-url.ts     stan widoku z URL (useSyncExternalStore, push/replace);
+                             nakładki mobilne: openForm/openScreen/closeOverlay
+    use-visited.ts      widoki odwiedzone choć raz (montowanie od pierwszej wizyty)
     preference-store.ts      ustawienie urządzenia: localStorage + matchMedia
     use-theme.ts        useTheme + ThemeSync (klasa `dark` na <html>)
     use-ui-variant.ts   useUiVariant
   *.test.ts             testy Vitest czystej logiki
-  supabase.ts           klient Supabase (tworzony leniwie – rzuca wyjątek przy pustym .env)
+  supabase.ts           klient Supabase (tworzony leniwie – rzuca wyjątek przy pustym .env),
+                        signOut() dla obu wersji
   auth.ts               login ↔ e-mail
 supabase/schema.sql     schemat bazy + RLS
+design/mobile/          materiały projektowe wersji mobilnej (makiety.tsx, styl-kokpit.jpg,
+                        ikona.svg, ikona-pelna.svg – wariant bez zaokrągleń dla maskable/iOS);
+                        render-icons.sh generuje PNG ikon przez Chrome headless (next/og nie
+                        obsługuje rozmycia z SVG); wykluczone z tsconfig.json i ESLint
 ```
 
 Przepływ danych:

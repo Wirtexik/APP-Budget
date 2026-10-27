@@ -44,6 +44,17 @@ export const EMPTY_FILTERS: HistoryFilters = {
 export const menuFilterCount = (f: HistoryFilters) =>
   (f.type ? 1 : 0) + (f.recurring ? 1 : 0) + f.categoryIds.length;
 
+/** Znaczek na przycisku filtrów w wersji mobilnej: menu plus sortowanie inne niż domyślne
+ * (sortowanie jest tam w tym samym panelu). „Data: od najnowszych” to kolejność domyślna. */
+export const drawerFilterCount = (f: HistoryFilters) =>
+  menuFilterCount(f) + (f.sort && f.sort !== "date_desc" ? 1 : 0);
+
+/** „Wyczyść wszystko” w panelu filtrów: wszystko poza wyszukiwaniem (jest poza panelem). */
+export const clearDrawerFilters = (f: HistoryFilters): HistoryFilters => ({
+  ...EMPTY_FILTERS,
+  query: f.query,
+});
+
 export const hasActiveFilters = (f: HistoryFilters) =>
   menuFilterCount(f) > 0 || f.query.trim() !== "" || f.sort !== null;
 
