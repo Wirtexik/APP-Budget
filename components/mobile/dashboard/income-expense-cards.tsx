@@ -1,44 +1,55 @@
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowUpRight, ChevronRight } from "lucide-react";
 
-import { currency } from "@/lib/budget";
+import { currency, type CategoryType } from "@/lib/budget";
 
 // Karty przychodów (nasycona zieleń z poświatą) i wydatków (szare „szkło”).
+// Dotknięcie karty otwiera listę wpisów miesiąca tego typu.
 export function IncomeExpenseCards({
   income,
   expenses,
   loading,
+  onOpen,
 }: {
   income: number;
   expenses: number;
   loading: boolean;
+  onOpen: (type: CategoryType) => void;
 }) {
+  const amount = (value: number) => (loading ? "…" : currency.format(value));
+
   return (
     <div className="grid grid-cols-2 gap-4">
-      <section
-        aria-label="Przychody"
-        className="rounded-3xl bg-income p-4 text-income-foreground shadow-[0_14px_32px_-14px_var(--income)]"
+      <button
+        type="button"
+        aria-label={`Przychody: ${amount(income)}. Pokaż listę`}
+        onClick={() => onOpen("przychod")}
+        className="rounded-3xl bg-income p-4 text-left text-income-foreground shadow-[0_14px_32px_-14px_var(--income)] outline-none transition-transform focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
       >
-        <span className="flex size-10 items-center justify-center rounded-full bg-income-strong text-white">
-          <ArrowUpRight className="size-5" />
+        <span className="flex items-center justify-between">
+          <span className="flex size-10 items-center justify-center rounded-full bg-income-strong text-white">
+            <ArrowUpRight className="size-5" />
+          </span>
+          <ChevronRight aria-hidden className="size-5 opacity-60" />
         </span>
-        <p className="mt-4 text-sm font-medium">Przychody</p>
-        <p className="text-lg font-bold tabular-nums">
-          {loading ? "…" : currency.format(income)}
-        </p>
-      </section>
+        <span className="mt-4 block text-sm font-medium">Przychody</span>
+        <span className="block text-lg font-bold tabular-nums">{amount(income)}</span>
+      </button>
 
-      <section
-        aria-label="Wydatki"
-        className="rounded-3xl border border-glass-border bg-foreground/[0.06] p-4 shadow-(--shadow-soft) backdrop-blur-xl"
+      <button
+        type="button"
+        aria-label={`Wydatki: ${amount(expenses)}. Pokaż listę`}
+        onClick={() => onOpen("wydatek")}
+        className="rounded-3xl border border-glass-border bg-foreground/[0.06] p-4 text-left shadow-(--shadow-soft) outline-none backdrop-blur-xl transition-transform focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
       >
-        <span className="flex size-10 items-center justify-center rounded-full bg-(image:--gradient-primary) text-white">
-          <ArrowDown className="size-5" />
+        <span className="flex items-center justify-between">
+          <span className="flex size-10 items-center justify-center rounded-full bg-(image:--gradient-primary) text-white">
+            <ArrowDown className="size-5" />
+          </span>
+          <ChevronRight aria-hidden className="size-5 text-muted-foreground" />
         </span>
-        <p className="mt-4 text-sm font-medium">Wydatki</p>
-        <p className="text-lg font-bold tabular-nums">
-          {loading ? "…" : currency.format(expenses)}
-        </p>
-      </section>
+        <span className="mt-4 block text-sm font-medium">Wydatki</span>
+        <span className="block text-lg font-bold tabular-nums">{amount(expenses)}</span>
+      </button>
     </div>
   );
 }

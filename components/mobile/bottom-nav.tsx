@@ -27,7 +27,7 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-// Dolna nawigacja (wg styl-kokpit.jpg): cztery widoki i wystający „+”.
+// Dolna nawigacja (wg styl-kokpit.jpg): cztery widoki i wystający „+” z podpisem.
 export function BottomNav({
   active,
   onSelect,
@@ -63,16 +63,18 @@ export function BottomNav({
     >
       <div className="flex h-16 items-center px-2">
         {LEFT.map(item)}
-        <div className="flex flex-1 justify-center">
-          <button
-            type="button"
-            aria-label="Dodaj transakcję"
-            onClick={onAdd}
-            className="-mt-8 flex size-16 items-center justify-center rounded-full bg-(image:--gradient-primary) text-primary-foreground shadow-[0_10px_28px_-6px_var(--glow)] ring-4 ring-background outline-none focus-visible:ring-ring/50 active:scale-95 transition-transform"
-          >
-            <Plus className="size-8" strokeWidth={2.5} />
-          </button>
-        </div>
+        {/* Podpis na wysokości pozostałych (od dołu), koło wystaje ponad pasek. */}
+        <button
+          type="button"
+          aria-label="Dodaj transakcję"
+          onClick={onAdd}
+          className="group flex flex-1 flex-col items-center justify-end gap-0.5 self-stretch pb-3 text-[11px] font-medium text-foreground/80 outline-none"
+        >
+          <span className="flex size-14 items-center justify-center rounded-full bg-(image:--gradient-primary) text-primary-foreground shadow-[0_10px_28px_-6px_var(--glow)] ring-4 ring-background transition-transform group-focus-visible:ring-ring/50 group-active:scale-95">
+            <Plus className="size-7" strokeWidth={2.5} />
+          </span>
+          Dodaj
+        </button>
         {RIGHT.map(item)}
       </div>
     </nav>

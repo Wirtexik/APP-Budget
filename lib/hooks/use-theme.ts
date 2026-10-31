@@ -20,7 +20,7 @@ export function useTheme() {
   const preference = parseThemePreference(stored);
   const setPreference = useCallback(
     // „Systemowy” to brak zapisu – wtedy działa też domyślnie.
-    (next: ThemePreference) => themeStore.write(next === "light" ? "light" : null),
+    (next: ThemePreference) => themeStore.write(next === "system" ? null : next),
     []
   );
   return { preference, theme: resolveTheme(preference, matches), setPreference };
@@ -30,8 +30,8 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
   root.style.colorScheme = theme;
-  // Pasek przeglądarki: przy wymuszonym jasnym obie wersje <meta> (jasna
-  // i ciemna wg systemu) dostają kolor jasnego motywu.
+  // Pasek przeglądarki: przy wymuszonym motywie obie wersje <meta> (jasna
+  // i ciemna wg systemu) dostają jego kolor.
   document
     .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
     .forEach((meta) => meta.setAttribute("content", THEME_COLORS[theme]));

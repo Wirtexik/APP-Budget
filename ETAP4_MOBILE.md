@@ -1,5 +1,7 @@
 # Etap 4: interfejs mobilny – program wdrożenia
 
+**Etap zamknięty 2026-10-27** (fazy F–O zrobione, sprawdzone na iOS i Androidzie). Plik zostaje jako zapis wymagań i decyzji; aktualny opis działania wersji mobilnej jest w ARCHITECTURE.md (sekcja „Wersja mobilna”), a rzeczy przeniesione dalej w [DO_ZROBIENIA.md](DO_ZROBIENIA.md).
+
 Plan szczegółowy do etapu 4 z PLAN.md. Powstał 2026-10-24 na podstawie PLAN.md, ARCHITECTURE.md, `components/app-shell.tsx`, `components/dashboard/dashboard.tsx`, `lib/ui-variant.ts`, `lib/dashboard-url.ts` i dokumentacji Next 16 (`app/manifest.ts`).
 
 Zasady jak w fazach A–E:
@@ -70,7 +72,7 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - Ekran 9: „Nadchodzące” pokazuje tylko to, co zwraca `upcoming_recurring` (bez przekreślonych wstrzymanych).
 - Ekran 13 (stany pomocnicze): robione razem z odpowiednimi ekranami, w stylu z grafiki.
 
-## Założenia domyślne (do potwierdzenia przy danej fazie)
+## Założenia (potwierdzone w fazach G–M)
 
 - **Formularz i ekran „Więcej” w URL**, np. `?formularz=nowy`, `?formularz=<id>` (edycja), `?ekran=wiecej`. Otwarcie robi `pushState`, więc systemowe „Wstecz” (gest na Androidzie) zamyka formularz zamiast wychodzić z aplikacji. Parametry tylko w wersji mobilnej; desktop je ignoruje i czyści.
 - **Po zapisie** formularz się zamyka, a komunikat (jak dziś) mówi, gdy wpis wypada poza oglądany miesiąc.
@@ -106,7 +108,7 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - [x] `MobileTransactionForm` (`create` i `edit`): przełącznik Wydatek/Przychód, duże pole kwoty (`inputMode="decimal"`, komunikat `AMOUNT_ERROR`), kafelki kategorii z ikonami, data, opis, przycisk zapisu przyklejony nad klawiaturą, w edycji „Usuń transakcję”.
 - [x] Kafelek „+ Nowa” w kategoriach: mały panel z nazwą, zapis przez `insertCategory`, nowa kategoria od razu zaznaczona.
 - [x] Otwieranie przez „+” (`?formularz=nowy`) i z listy (`?formularz=<id>`); id spoza pobranego miesiąca → formularz się nie otwiera, parametr znika.
-- **Decyzja (2026-10-24):** przełącznik typu działa także w edycji (`setType` w `useTransactionForm`): zmiana typu czyści kategorię, powrót do pierwotnego typu ją przywraca. Desktop zostaje przy stałym typie – wyrównanie zapisane w PLAN.md, etap 5. „+ Nowa” z nazwą istniejącej kategorii (także domyślnej) tylko ją zaznacza (`existingCategoryValue`). Przycisk zapisu nad klawiaturą iOS: `useKeyboardInset` (`visualViewport`).
+- **Decyzja (2026-10-24):** przełącznik typu działa także w edycji (`setType` w `useTransactionForm`): zmiana typu czyści kategorię, powrót do pierwotnego typu ją przywraca. Desktop zostaje przy stałym typie – wyrównanie w DO_ZROBIENIA.md. „+ Nowa” z nazwą istniejącej kategorii (także domyślnej) tylko ją zaznacza (`existingCategoryValue`). Przycisk zapisu nad klawiaturą iOS: `useKeyboardInset` (`visualViewport`).
 - [x] **Sprawdzenie na telefonie:** jaka klawiatura się otwiera (iOS i Android); decyzja, czy zostaje systemowa. Sprawdzone 2026-10-24: zostaje systemowa.
 
 ### Faza I: Kokpit i lista transakcji z przesunięciem
@@ -147,26 +149,22 @@ Opis do odwzorowania; dokładne wartości kolorów ustalane w fazie F i zapisane
 - [x] Logikę `CategoryForm` (230 linii) wydzielić do hooka, żeby obie wersje miały te same zasady (kategorie domyślne nieusuwalne, blokada usunięcia).
 - [x] Przełącznik „Automatycznie / Komputerowa / Mobilna” na `useUiVariant().setOverride`.
 - [x] Desktop: menu konta w `DashboardHeader` (login, wersja interfejsu, wylogowanie).
-- **Decyzje (2026-10-27):** `useCategoryForm` (dodawanie i edycja) i `useRemoveCategory` (sprawdzenie użycia, usunięcie, komunikaty) w `lib/hooks/use-category-actions.ts`, wspólne z `CategoryForm` i `EditCategoryDialog` (`CategoryForm` 230 → 169 linii). Kategorie w „Więcej” w podgrupach Wydatki / Przychody, domyślne z listy `DEFAULT_CATEGORIES` (także jeszcze niezapisane w bazie). Usuwanie w mobile z potwierdzeniem w `Drawer`, desktop bez zmian (wyrównanie w PLAN.md, etap 5); ostrzeżenie o zmianie typu tylko, gdy typ faktycznie się zmienia. `UI_CHOICES`, `choiceFromOverride` / `overrideFromChoice` w `lib/ui-variant.ts`, `signOut()` w `lib/supabase.ts`. Desktop: `AccountMenu` (awatar z loginem, `DropdownMenu`) zamiast przycisku „Wyloguj”, `ThemeToggle` zostaje obok.
+- **Decyzje (2026-10-27):** `useCategoryForm` (dodawanie i edycja) i `useRemoveCategory` (sprawdzenie użycia, usunięcie, komunikaty) w `lib/hooks/use-category-actions.ts`, wspólne z `CategoryForm` i `EditCategoryDialog` (`CategoryForm` 230 → 169 linii). Kategorie w „Więcej” w podgrupach Wydatki / Przychody, domyślne z listy `DEFAULT_CATEGORIES` (także jeszcze niezapisane w bazie). Usuwanie w mobile z potwierdzeniem w `Drawer`, desktop bez zmian (wyrównanie w DO_ZROBIENIA.md); ostrzeżenie o zmianie typu tylko, gdy typ faktycznie się zmienia. `UI_CHOICES`, `choiceFromOverride` / `overrideFromChoice` w `lib/ui-variant.ts`, `signOut()` w `lib/supabase.ts`. Desktop: `AccountMenu` (awatar z loginem, `DropdownMenu`) zamiast przycisku „Wyloguj”, `ThemeToggle` zostaje obok.
 
 ### Faza N: PWA
 
 - [x] PNG z `ikona.svg`: 192, 512, wersja `maskable` (motyw w bezpiecznym środku), `apple-icon` 180×180 i `app/icon.png`. SVG ma rozmycie (`feGaussianBlur`), którego `next/og` nie obsługuje, więc PNG powstają jednorazowo przez przeglądarkę (np. Chrome headless) i trafiają do repo. iOS nie bierze przezroczystości: wersja `apple-icon` na pełnym tle, bez zaokrągleń.
 - [x] `app/manifest.ts`: `name` „Budżet”, `short_name`, `start_url: "/"`, `display: "standalone"`, `background_color` i `theme_color` zgodne z `viewport`, `lang: "pl"`.
 - [x] `metadata.appleWebApp` (`capable`, `statusBarStyle`, `title`) w `app/layout.tsx`.
-- [ ] Sprawdzić w buildzie: `/manifest.webmanifest`, linki w `<head>`, instalacja na Androidzie (Chrome) i iOS (Safari „Do ekranu początkowego”). **Build sprawdzony 2026-10-27** (`next start`: manifest `application/manifest+json`, ikony 200, w `<head>` `manifest`, `icon`, `apple-touch-icon`, `apple-mobile-web-app-title`/`-status-bar-style`, `mobile-web-app-capable`). **Zostaje instalacja na telefonach** (do fazy O).
+- [x] Sprawdzić w buildzie: `/manifest.webmanifest`, linki w `<head>`, instalacja na Androidzie (Chrome) i iOS (Safari „Do ekranu początkowego”). **Build sprawdzony 2026-10-27** (`next start`: manifest `application/manifest+json`, ikony 200, w `<head>` `manifest`, `icon`, `apple-touch-icon`, `apple-mobile-web-app-title`/`-status-bar-style`, `mobile-web-app-capable`). Instalacja na Androidzie i iOS sprawdzona 2026-10-27: działa, ikona poprawna.
 - **Decyzje (2026-10-27):** PNG generuje `design/mobile/render-icons.sh` (Chrome headless, przezroczyste tło). Wariant `ikona-pelna.svg` (bez `rx`) dla `maskable` i `apple-icon`; motyw mieści się w strefie bezpiecznej (najdalszy róg ok. 185 px od środka przy promieniu 205 px), więc bez pomniejszania. `app/icon.png` 64 px, domyślny `app/favicon.ico` usunięty. `background_color` i `theme_color` = `THEME_COLORS.light` (jak `viewport`). `statusBarStyle: "default"` (treść nie wchodzi pod pasek statusu). Next 16 wypisuje `mobile-web-app-capable` zamiast `apple-mobile-web-app-capable`; iOS 16.4+ i tak bierze tryb `standalone` z manifestu. Test `lib/manifest.test.ts`: ikony z manifestu istnieją w `public/` i mają zadeklarowany rozmiar.
 
 ### Faza O: zamknięcie etapu
 
-- [ ] ARCHITECTURE.md: opis wersji mobilnej (powłoka, tokeny `data-ui="mobile"`, URL `formularz`/`ekran`, gesty, `Drawer`, ikony kategorii, PWA).
-- [ ] PLAN.md: etap 4 oznaczony jako zrobiony, przeniesione rzeczy do etapu 5.
-- [ ] **Do sprawdzenia w przeglądarce / na telefonie:** dolna nawigacja i „Wstecz”, notch i pasek gestów (`safe-area`), klawiatura przy polu kwoty, przesuwanie wierszy przy przewijaniu, panele z dołu, przełączanie wersji bez utraty stanu, oba motywy, instalacja PWA.
+- [x] ARCHITECTURE.md: opis wersji mobilnej (powłoka, tokeny `data-ui="mobile"`, URL `formularz`/`ekran`, gesty, `Drawer`, ikony kategorii, PWA).
+- [x] PLAN.md: etap 4 oznaczony jako zrobiony, przeniesione rzeczy do etapu 5 (dziś w DO_ZROBIENIA.md).
+- [x] **Do sprawdzenia w przeglądarce / na telefonie:** dolna nawigacja i „Wstecz”, notch i pasek gestów (`safe-area`), klawiatura przy polu kwoty, przesuwanie wierszy przy przewijaniu, panele z dołu, przełączanie wersji bez utraty stanu, oba motywy, instalacja PWA. Sprawdzone 2026-10-27: wszystko działa.
 
 ## Poza zakresem etapu 4
 
-- Tryb offline, service worker, powiadomienia push (także dzwonek z grafiki).
-- Nowy wygląd wersji komputerowej (tokeny działają tylko w mobile).
-- Zakres kwot i dat w filtrach (etap 2, „Zostaje”).
-- Dynamiczny zakres lat (zostaje `YEAR_ITEMS`).
-- Wybór ikony kategorii przez użytkownika (wymagałby kolumny w bazie).
+Świadomie odłożone (offline i powiadomienia, nowy wygląd desktopu, zakres kwot i dat w filtrach, dynamiczny zakres lat, wybór ikony kategorii) – lista w [DO_ZROBIENIA.md](DO_ZROBIENIA.md).

@@ -1,19 +1,29 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/hooks/use-theme";
-import { toggleThemePreference } from "@/lib/theme";
+import { toggleThemePreference, type ThemePreference } from "@/lib/theme";
 
-// Przełącznik motywu jednym kliknięciem, wspólny dla obu wersji:
-// „Systemowy” (księżyc, domyślny) ↔ „Jasny” (słońce).
+const LABELS: Record<ThemePreference, string> = {
+  system: "Motyw systemowy – kliknij, aby włączyć jasny",
+  light: "Motyw jasny – kliknij, aby włączyć ciemny",
+  dark: "Motyw ciemny – kliknij, aby włączyć systemowy",
+};
+
+const ICONS: Record<ThemePreference, LucideIcon> = {
+  system: Monitor,
+  light: Sun,
+  dark: Moon,
+};
+
+// Przełącznik motywu jednym kliknięciem (desktop):
+// „Systemowy” (domyślny) → „Jasny” → „Ciemny” → „Systemowy”.
 export function ThemeToggle() {
   const { preference, setPreference } = useTheme();
-  const system = preference === "system";
-  const label = system
-    ? "Motyw systemowy – kliknij, aby włączyć jasny"
-    : "Motyw jasny – kliknij, aby włączyć systemowy";
+  const label = LABELS[preference];
+  const Icon = ICONS[preference];
 
   return (
     <Button
@@ -23,7 +33,7 @@ export function ThemeToggle() {
       title={label}
       onClick={() => setPreference(toggleThemePreference(preference))}
     >
-      {system ? <Moon /> : <Sun />}
+      <Icon />
     </Button>
   );
 }

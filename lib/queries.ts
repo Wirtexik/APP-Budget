@@ -2,6 +2,8 @@
 // lib/budget.ts oraz supabase/schema.sql. Komponenty nie wołają Supabase same –
 // wszystkie odczyty i zapisy są tutaj (zlecenia stałe: lib/recurring-queries.ts).
 // Funkcje zapisu zwracają komunikat błędu dla użytkownika albo null.
+import type { PostgrestError } from "@supabase/supabase-js";
+
 import {
   monthRange,
   yearRange,
@@ -14,6 +16,7 @@ import {
 import {
   DEFAULT_CATEGORIES,
   defaultValue,
+  reservedCategoryMessage,
   sameCategory,
   userValue,
 } from "@/lib/categories";
@@ -99,6 +102,8 @@ export async function insertCategory(
 ): Promise<Resolved> {
   const trimmed = fields.name.trim();
   if (!trimmed) return { id: null, error: "Podaj nazwę kategorii." };
+  const reserved = reservedCategoryMessage(fields);
+  if (reserved) return { id: null, error: reserved };
 
   const { data, error } = await getSupabase()
     .from("categories")
@@ -116,6 +121,8 @@ export async function updateCategory(
 ) {
   const trimmed = fields.name.trim();
   if (!trimmed) return "Podaj nazwę kategorii.";
+  const reserved = reservedCategoryMessage(fields);
+  if (reserved) return reserved;
 
   const { data, error } = await getSupabase()
     .from("categories")
@@ -275,40 +282,63 @@ export interface YearlyData {
   transactions: Transaction[];
 }
 
-// Rozmiar partii przy pobieraniu roku. Nie może przekraczać limitu PostgREST
-// (`max_rows`, w Supabase domyślnie 1000) – niepełna partia oznacza koniec danych.
-const YEAR_PAGE_SIZE = 1000;
+// Rozmiar partii przy pobieraniu wielu transakcji. Nie może przekraczać limitu
+// PostgREST (`max_rows`, w Supabase domyślnie 1000) – niepełna partia oznacza
+// koniec danych.
+const PAGE_SIZE = 1000;
 
-// Wszystkie transakcje wybranego roku – dane dla podsumowania rocznego w Raportach.
-// PostgREST zwraca najwyżej `max_rows` wierszy na zapytanie, więc rok pobieramy
-// partiami; bez tego raport roczny po cichu gubiłby wpisy ponad limit.
-export async function fetchYearlyTransactions(
-  userId: string,
-  year: number
-): Promise<YearlyData> {
-  const { start, next } = yearRange(year);
+type PageQuery = (
+  from: number,
+  to: number
+) => PromiseLike<{ data: unknown[] | null; error: PostgrestError | null }>;
+
+// PostgREST zwraca najwyżej `max_rows` wierszy na zapytanie, więc dłuższe
+// listy pobieramy partiami; bez tego wyniki po cichu gubiłyby wpisy ponad limit.
+// Zapytanie musi mieć pełne sortowanie – warunek stabilnego stronicowania.
+async function fetchAllPages(query: PageQuery): Promise<YearlyData> {
   const transactions: Transaction[] = [];
 
-  for (let from = 0; ; from += YEAR_PAGE_SIZE) {
-    const { data, error } = await getSupabase()
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await query(from, from + PAGE_SIZE - 1);
+    if (error) return { error: errorMessage(error), transactions: [] };
+
+    const page = (data ?? []) as Transaction[];
+    transactions.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  return { error: null, transactions };
+}
+
+// Wszystkie transakcje wybranego roku – dane dla podsumowania rocznego w Raportach.
+export function fetchYearlyTransactions(userId: string, year: number) {
+  const { start, next } = yearRange(year);
+  return fetchAllPages((from, to) =>
+    getSupabase()
       .from("transactions")
       .select(TRANSACTION_COLUMNS)
       .eq("user_id", userId)
       .gte("date", start)
       .lt("date", next)
-      // Ta sama kolejność co w `fetchDashboardData`; pełne sortowanie jest też
-      // warunkiem stabilnego stronicowania przez `range`.
+      // Ta sama kolejność co w `fetchDashboardData`.
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
-      .range(from, from + YEAR_PAGE_SIZE - 1);
+      .range(from, to)
+  );
+}
 
-    if (error) return { error: errorMessage(error), transactions: [] };
-
-    const page = (data ?? []) as Transaction[];
-    transactions.push(...page);
-    if (page.length < YEAR_PAGE_SIZE) break;
-  }
-
-  return { error: null, transactions };
+// Wszystkie wpisy kategorii skarbonki od początku (lib/piggy-bank.ts).
+export function fetchPiggyBankEntries(userId: string, categoryIds: Id[]) {
+  return fetchAllPages((from, to) =>
+    getSupabase()
+      .from("transactions")
+      .select(TRANSACTION_COLUMNS)
+      .eq("user_id", userId)
+      .in("category_id", categoryIds)
+      .order("date")
+      .order("created_at")
+      .order("id")
+      .range(from, to)
+  );
 }

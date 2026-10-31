@@ -8,15 +8,26 @@ export const DEFAULT_CATEGORIES: CategoryRef[] = [
   { name: "Rachunki", type: "wydatek" },
   { name: "Rozrywka", type: "wydatek" },
   { name: "Zdrowie", type: "wydatek" },
+  { name: "Skarbonka", type: "wydatek" },
   { name: "Wynagrodzenie", type: "przychod" },
   { name: "Premia", type: "przychod" },
   { name: "Inne przychody", type: "przychod" },
+  { name: "Ze skarbonki", type: "przychod" },
 ];
 
 const normalizeName = (name: string) => name.trim().toLowerCase();
 
 export const sameCategory = (a: CategoryRef, b: CategoryRef) =>
   a.type === b.type && normalizeName(a.name) === normalizeName(b.name);
+
+// Skarbonka (lib/piggy-bank.ts): wrzucenie to zwykły wydatek „Skarbonka”,
+// rozbicie – przychód „Ze skarbonki” zapisywany tylko z „Więcej”.
+export const PIGGY_DEPOSIT: CategoryRef = { name: "Skarbonka", type: "wydatek" };
+export const PIGGY_BREAK: CategoryRef = { name: "Ze skarbonki", type: "przychod" };
+
+/** Wpis rozbicia skarbonki można tylko usunąć (usunięcie cofa rozbicie). */
+export const isPiggyBreak = (category: CategoryRef | undefined) =>
+  category !== undefined && sameCategory(category, PIGGY_BREAK);
 
 export const defaultValue = (c: CategoryRef) => `default:${c.type}:${c.name}`;
 
@@ -33,12 +44,13 @@ export interface CategoryOptions {
 }
 
 // Kategorie jednego typu: najpierw domyślne, pod nimi te dodane przez użytkownika.
+// Bez „Ze skarbonki” – rozbicie zapisuje tylko skarbonka, żeby nie podbierać ręcznie.
 export function buildCategoryOptions(
   categories: Category[],
   type: CategoryType
 ): CategoryOptions {
   return {
-    defaults: DEFAULT_CATEGORIES.filter((c) => c.type === type).map((c) => ({
+    defaults: DEFAULT_CATEGORIES.filter((c) => c.type === type && !isPiggyBreak(c)).map((c) => ({
       value: defaultValue(c),
       label: c.name,
     })),
@@ -57,15 +69,23 @@ export function valueForCategory(category: Category) {
 // Wartość już istniejącej kategorii o tej nazwie i typie (domyślnej albo
 // własnej), bez względu na wielkość liter i spacje; null, gdy takiej nie ma.
 // Szybkie dodawanie kategorii zaznacza wtedy istniejącą zamiast tworzyć duplikat.
+// „Ze skarbonki” jest pomijana – jej zapis i tak odrzuca `reservedCategoryMessage`.
 export function existingCategoryValue(
   categories: Category[],
   target: CategoryRef
 ): string | null {
+  if (isPiggyBreak(target)) return null;
   const preset = DEFAULT_CATEGORIES.find((d) => sameCategory(d, target));
   if (preset) return defaultValue(preset);
   const own = categories.find((c) => sameCategory(c, target));
   return own ? userValue(own) : null;
 }
+
+// Komunikat, gdy własna kategoria udawałaby rozbicie skarbonki; null, gdy nazwa jest wolna.
+export const reservedCategoryMessage = (target: CategoryRef) =>
+  isPiggyBreak(target)
+    ? "Przychód „Ze skarbonki” zapisuje tylko rozbicie skarbonki w „Więcej”."
+    : null;
 
 // Wyjaśnienie, czemu nie można usunąć kategorii; null, gdy nic jej nie używa.
 export function categoryUsageMessage(usage: {
