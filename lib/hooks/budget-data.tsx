@@ -1,11 +1,12 @@
 "use client";
 
 // Warstwa danych aplikacji: jedno źródło danych dla wersji desktopowej i mobilnej.
-// Provider trzyma oglądany okres, kategorie, transakcje miesiąca, zlecenia stałe
-// i dane roku; komponenty czytają je przez `useBudgetData`, `useRecurringData`
-// i `useYearlyData`, a zapisy idą przez lib/queries.ts i lib/recurring-queries.ts.
+// Provider trzyma oglądany okres, kategorie, transakcje miesiąca, zlecenia stałe,
+// dane roku i skarbonkę; komponenty czytają je przez `useBudgetData`,
+// `useRecurringData`, `useYearlyData` i `usePiggyBankData`, a zapisy idą przez
+// lib/queries.ts i lib/recurring-queries.ts.
 //
-// Zlecenia i rok pobierają się leniwie – dopiero gdy pierwszy komponent wywoła
+// Zlecenia, rok i skarbonka pobierają się leniwie – dopiero gdy pierwszy komponent wywoła
 // swój hook – a potem zostają w providerze, więc powrót na zakładkę nie pobiera
 // ich od nowa.
 
@@ -32,7 +33,13 @@ import {
   type Period,
   type Transaction,
 } from "@/lib/budget";
-import { fetchDashboardData, fetchYearlyTransactions } from "@/lib/queries";
+import { PIGGY_BREAK, PIGGY_DEPOSIT, sameCategory } from "@/lib/categories";
+import { summarizePiggyBank, type PiggyBankSummary } from "@/lib/piggy-bank";
+import {
+  fetchDashboardData,
+  fetchPiggyBankEntries,
+  fetchYearlyTransactions,
+} from "@/lib/queries";
 import {
   UPCOMING_DAYS,
   addDays,
@@ -80,6 +87,11 @@ export interface YearlyData {
   error: string | null;
 }
 
+export interface PiggyBankData extends PiggyBankSummary {
+  loading: boolean;
+  error: string | null;
+}
+
 interface RecurringState {
   rules: RecurringRule[];
   upcoming: UpcomingOccurrence[];
@@ -93,12 +105,20 @@ interface YearlyState {
   error: string | null;
 }
 
+interface PiggyBankState {
+  entries: Transaction[];
+  loading: boolean;
+  error: string | null;
+}
+
 interface ContextValue {
   budget: BudgetData;
   recurring: RecurringData;
   yearly: YearlyData;
+  piggy: PiggyBankState & { breakCategoryId: Id | null };
   requestRecurring: () => void;
   requestYearly: () => void;
+  requestPiggy: () => void;
 }
 
 const BudgetDataContext = createContext<ContextValue | null>(null);
@@ -125,6 +145,17 @@ export function useYearlyData(): YearlyData {
   const { yearly, requestYearly } = useBudgetContext();
   useEffect(requestYearly, [requestYearly]);
   return yearly;
+}
+
+export function usePiggyBankData(): PiggyBankData {
+  const { piggy, requestPiggy } = useBudgetContext();
+  useEffect(requestPiggy, [requestPiggy]);
+  const { entries, breakCategoryId, loading, error } = piggy;
+  const summary = useMemo(
+    () => summarizePiggyBank(entries, breakCategoryId, todayKey()),
+    [entries, breakCategoryId]
+  );
+  return { ...summary, loading, error };
 }
 
 function reportMaterialized({ error, created }: MaterializeResult) {
@@ -157,6 +188,8 @@ const INITIAL_RECURRING: RecurringState = {
 
 const INITIAL_YEARLY: YearlyState = { transactions: [], loading: true, error: null };
 
+const INITIAL_PIGGY: PiggyBankState = { entries: [], loading: true, error: null };
+
 // Globalny filtr czasu (`period`) przychodzi z zewnątrz – w aplikacji z URL
 // (lib/hooks/use-dashboard-url.ts) – a `onPeriodChange` go zmienia.
 export function BudgetDataProvider({
@@ -177,11 +210,13 @@ export function BudgetDataProvider({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Zlecenia i rok: `…Wanted` włącza się przy pierwszym użyciu hooka.
+  // Zlecenia, rok i skarbonka: `…Wanted` włącza się przy pierwszym użyciu hooka.
   const [recurringWanted, setRecurringWanted] = useState(false);
   const [recurringState, setRecurringState] = useState(INITIAL_RECURRING);
   const [yearlyWanted, setYearlyWanted] = useState(false);
   const [yearlyState, setYearlyState] = useState(INITIAL_YEARLY);
+  const [piggyWanted, setPiggyWanted] = useState(false);
+  const [piggyState, setPiggyState] = useState(INITIAL_PIGGY);
 
   // Nowy okres (z selektora albo z „Wstecz”) czyści stare dane od razu, inaczej
   // przez chwilę widać by było liczby z poprzedniego miesiąca (lub roku) pod
@@ -200,6 +235,7 @@ export function BudgetDataProvider({
   const monthSeq = useRef(0);
   const recurringSeq = useRef(0);
   const yearSeq = useRef(0);
+  const piggySeq = useRef(0);
 
   // Zaległe wykonania zleceń stałych tworzymy raz, przy otwarciu aplikacji –
   // przed pierwszym pobraniem danych, żeby nowe wpisy od razu były widoczne.
@@ -242,6 +278,29 @@ export function BudgetDataProvider({
       });
   }, [userId, year, whenMaterialized]);
 
+  // Skarbonka czyta wpisy swoich dwóch kategorii; dopóki żadnej nie ma w bazie
+  // (powstają przy pierwszym użyciu), nie ma czego pobierać.
+  const piggyDepositId = categories.find((c) => sameCategory(c, PIGGY_DEPOSIT))?.id ?? null;
+  const piggyBreakId = categories.find((c) => sameCategory(c, PIGGY_BREAK))?.id ?? null;
+  const hasPiggyCategories = piggyDepositId !== null || piggyBreakId !== null;
+
+  const loadPiggy = useCallback(() => {
+    const ids = [piggyDepositId, piggyBreakId].filter((id): id is Id => id !== null);
+    if (!ids.length) return Promise.resolve();
+    const id = ++piggySeq.current;
+    return whenMaterialized()
+      .then(() => fetchPiggyBankEntries(userId, ids))
+      .then((data) => {
+        if (id !== piggySeq.current) return;
+        // Przy błędzie zostają poprzednie dane, jak w danych miesiąca.
+        setPiggyState((prev) =>
+          data.error
+            ? { ...prev, loading: false, error: data.error }
+            : { entries: data.transactions, loading: false, error: null }
+        );
+      });
+  }, [userId, piggyDepositId, piggyBreakId, whenMaterialized]);
+
   const loadRecurring = useCallback(() => {
     const id = ++recurringSeq.current;
     return whenMaterialized()
@@ -267,10 +326,19 @@ export function BudgetDataProvider({
     if (recurringWanted) void loadRecurring();
   }, [recurringWanted, loadRecurring]);
 
+  // Także po zmianie id kategorii skarbonki (np. pierwsze rozbicie ją tworzy).
+  useEffect(() => {
+    if (piggyWanted) void loadPiggy();
+  }, [piggyWanted, loadPiggy]);
+
   // Odświeża karty, tabele i raporty po każdej zmianie danych.
   const refresh = useCallback(async () => {
-    await Promise.all([loadMonth(), yearlyWanted ? loadYear() : undefined]);
-  }, [loadMonth, loadYear, yearlyWanted]);
+    await Promise.all([
+      loadMonth(),
+      yearlyWanted ? loadYear() : undefined,
+      piggyWanted ? loadPiggy() : undefined,
+    ]);
+  }, [loadMonth, loadYear, yearlyWanted, loadPiggy, piggyWanted]);
 
   // Po zapisie: odśwież widok. Filtr miesiąca służy wyłącznie do wyświetlania –
   // zapis z dowolną datą jest zawsze dozwolony, a filtr zostaje bez zmian. Gdy
@@ -301,6 +369,17 @@ export function BudgetDataProvider({
 
   const requestRecurring = useCallback(() => setRecurringWanted(true), []);
   const requestYearly = useCallback(() => setYearlyWanted(true), []);
+  const requestPiggy = useCallback(() => setPiggyWanted(true), []);
+
+  // Bez kategorii skarbonki w bazie skarbonka jest pusta; do pierwszego
+  // pobrania kategorii nie wiadomo jednak, czy istnieją – wtedy „ładowanie”.
+  const piggy = useMemo(
+    () =>
+      hasPiggyCategories
+        ? { ...piggyState, breakCategoryId: piggyBreakId }
+        : { entries: [], loading, error: null, breakCategoryId: null },
+    [hasPiggyCategories, piggyState, piggyBreakId, loading]
+  );
 
   const categoryById = useMemo(
     () => new Map(categories.map((c) => [c.id, c])),
@@ -324,8 +403,10 @@ export function BudgetDataProvider({
       },
       recurring: { ...recurringState, afterChange },
       yearly: { year, ...yearlyState },
+      piggy,
       requestRecurring,
       requestYearly,
+      requestPiggy,
     }),
     [
       userId,
@@ -342,8 +423,10 @@ export function BudgetDataProvider({
       afterChange,
       year,
       yearlyState,
+      piggy,
       requestRecurring,
       requestYearly,
+      requestPiggy,
     ]
   );
 

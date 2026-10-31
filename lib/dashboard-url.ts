@@ -5,9 +5,15 @@
 // Przykład: `/?widok=historia&rok=2026&miesiac=9&q=kino&sort=amount_desc`.
 // Wartości domyślne (Kokpit, bieżący miesiąc, brak filtrów) nie trafiają do URL.
 //
-// Tylko wersja mobilna: otwarty formularz (`formularz`) i ekran „Więcej”
-// (`ekran=wiecej`). Desktop je ignoruje i czyści.
-import { YEAR_ITEMS, samePeriod, type Id, type Period } from "@/lib/budget";
+// Tylko wersja mobilna: otwarty formularz (`formularz`) i ekran na pełnym
+// ekranie (`ekran=wiecej|przychody|wydatki`). Desktop je ignoruje i czyści.
+import {
+  YEAR_ITEMS,
+  samePeriod,
+  type CategoryType,
+  type Id,
+  type Period,
+} from "@/lib/budget";
 import {
   filtersFromParams,
   writeFilterParams,
@@ -21,16 +27,24 @@ export const DEFAULT_VIEW: View = "kokpit";
 export const isView = (value: unknown): value is View =>
   VIEWS.some((view) => view === value);
 
+/** Sąsiedni widok w kolejności dolnej nawigacji (gest w bok); `null` na końcach. */
+export function adjacentView(view: View, step: 1 | -1): View | null {
+  return VIEWS[VIEWS.indexOf(view) + step] ?? null;
+}
+
 /**
- * Formularz na pełnym ekranie; `id: null` = dodawanie.
- * W URL: `nowy`, `<uuid>` (transakcja), `zlecenie`, `zlecenie-<uuid>`.
+ * Formularz na pełnym ekranie; `id: null` = dodawanie, `type` = typ nowej
+ * transakcji (domyślnie wydatek).
+ * W URL: `nowy`, `nowy-przychod`, `<uuid>` (transakcja), `zlecenie`, `zlecenie-<uuid>`.
  */
 export interface MobileForm {
   kind: "transaction" | "recurring";
   id: Id | null;
+  type?: CategoryType;
 }
 
-export const SCREENS = ["wiecej"] as const;
+/** „Więcej” i listy przychodów/wydatków miesiąca z Kokpitu. */
+export const SCREENS = ["wiecej", "przychody", "wydatki"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export interface DashboardUrlState {
@@ -43,10 +57,12 @@ export interface DashboardUrlState {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECURRING_PREFIX = "zlecenie";
+const NEW_INCOME = "nowy-przychod";
 
 export function parseMobileForm(value: string | null): MobileForm | null {
   if (value === null) return null;
   if (value === "nowy") return { kind: "transaction", id: null };
+  if (value === NEW_INCOME) return { kind: "transaction", id: null, type: "przychod" };
   if (value === RECURRING_PREFIX) return { kind: "recurring", id: null };
   if (UUID.test(value)) return { kind: "transaction", id: value };
   const id = value.slice(RECURRING_PREFIX.length + 1);
@@ -55,8 +71,8 @@ export function parseMobileForm(value: string | null): MobileForm | null {
     : null;
 }
 
-export function mobileFormParam({ kind, id }: MobileForm): string {
-  if (kind === "transaction") return id ?? "nowy";
+export function mobileFormParam({ kind, id, type }: MobileForm): string {
+  if (kind === "transaction") return id ?? (type === "przychod" ? NEW_INCOME : "nowy");
   return id ? `${RECURRING_PREFIX}-${id}` : RECURRING_PREFIX;
 }
 

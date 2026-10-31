@@ -4,8 +4,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import { LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { FullScreen } from "@/components/mobile/full-screen";
+import { MORE_CARD } from "@/components/mobile/more/card";
 import { CategoryDrawer } from "@/components/mobile/more/category-drawer";
 import { DeleteCategoryDrawer } from "@/components/mobile/more/delete-category-drawer";
+import { PiggyBankSection } from "@/components/mobile/more/piggy-bank/piggy-bank-section";
 import { Segmented, type SegmentedOption } from "@/components/mobile/segmented";
 import type { Category, CategoryRef, CategoryType } from "@/lib/budget";
 import { DEFAULT_CATEGORIES, ownCategories } from "@/lib/categories";
@@ -24,6 +26,7 @@ import {
 const THEME_OPTIONS: SegmentedOption<ThemePreference>[] = [
   { value: "system", label: "System" },
   { value: "light", label: "Jasny" },
+  { value: "dark", label: "Ciemny" },
 ];
 
 const CATEGORY_SECTIONS: { type: CategoryType; title: string }[] = [
@@ -31,11 +34,8 @@ const CATEGORY_SECTIONS: { type: CategoryType; title: string }[] = [
   { type: "przychod", title: "Przychody" },
 ];
 
-const CARD =
-  "overflow-hidden rounded-3xl border border-glass-border bg-glass shadow-(--shadow-soft) backdrop-blur-xl";
-
-// Ekran „Więcej” (ekran 12 makiety): konto, kategorie, wygląd, wersja
-// interfejsu i wylogowanie. Kategorie domyślne są bez akcji.
+// Ekran „Więcej” (ekran 12 makiety): konto, skarbonka, kategorie, wygląd,
+// wersja interfejsu i wylogowanie. Kategorie domyślne są bez akcji.
 export function MoreScreen({ login, onClose }: { login: string; onClose: () => void }) {
   const { categories } = useBudgetData();
   const { preference, setPreference } = useTheme();
@@ -56,7 +56,7 @@ export function MoreScreen({ login, onClose }: { login: string; onClose: () => v
   return (
     <FullScreen title="Więcej" onClose={onClose}>
       <div className="flex flex-col gap-6 pt-2">
-        <section className={`${CARD} flex items-center gap-4 p-4`}>
+        <section className={`${MORE_CARD} flex items-center gap-4 p-4`}>
           <span
             aria-hidden
             className="flex size-14 shrink-0 items-center justify-center rounded-full bg-(image:--gradient-primary) text-2xl font-semibold text-primary-foreground uppercase shadow-[0_6px_16px_-6px_var(--glow)]"
@@ -69,8 +69,12 @@ export function MoreScreen({ login, onClose }: { login: string; onClose: () => v
           </div>
         </section>
 
+        <Group title="Skarbonka">
+          <PiggyBankSection />
+        </Group>
+
         <Group title="Kategorie">
-          <div className={CARD}>
+          <div className={MORE_CARD}>
             {CATEGORY_SECTIONS.map(({ type, title }) => (
               <div key={type}>
                 <h4 className="px-4 pt-3 pb-1 text-xs font-semibold text-muted-foreground">
@@ -121,15 +125,14 @@ export function MoreScreen({ login, onClose }: { login: string; onClose: () => v
         </Group>
 
         <Group title="Ustawienia">
-          <div className={`${CARD} divide-y divide-border/60`}>
-            <div className="flex items-center justify-between gap-4 p-4">
+          <div className={`${MORE_CARD} divide-y divide-border/60`}>
+            <div className="flex flex-col gap-3 p-4">
               <span className="font-medium">Wygląd</span>
               <Segmented
                 label="Wygląd"
                 options={THEME_OPTIONS}
                 value={preference}
                 onChange={setPreference}
-                className="w-44"
               />
             </div>
             <div className="flex flex-col gap-3 p-4">
@@ -150,7 +153,7 @@ export function MoreScreen({ login, onClose }: { login: string; onClose: () => v
         <button
           type="button"
           onClick={signOut}
-          className={`${CARD} flex min-h-14 items-center justify-center gap-2 text-lg font-semibold text-destructive outline-none focus-visible:ring-3 focus-visible:ring-ring/50`}
+          className={`${MORE_CARD} flex min-h-14 items-center justify-center gap-2 text-lg font-semibold text-destructive outline-none focus-visible:ring-3 focus-visible:ring-ring/50`}
         >
           <LogOut className="size-5" />
           Wyloguj się

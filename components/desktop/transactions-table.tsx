@@ -18,8 +18,10 @@ import {
   type Category,
   type Transaction,
 } from "@/lib/budget";
+import { isPiggyBreak } from "@/lib/categories";
 
 // Tabela transakcji z kolumną „Akcje” (edycja / usuwanie) – wspólna dla kokpitu i historii.
+// Wpis rozbicia skarbonki (mobile, „Więcej”) można tylko usunąć – cofa to rozbicie.
 export function TransactionsTable({
   transactions,
   categoryById,
@@ -94,16 +96,18 @@ export function TransactionsTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Edytuj transakcję"
-                      title="Edytuj"
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => onEdit(t)}
-                    >
-                      <Pencil />
-                    </Button>
+                    {!isPiggyBreak(category) && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Edytuj transakcję"
+                        title="Edytuj"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => onEdit(t)}
+                      >
+                        <Pencil />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon-sm"

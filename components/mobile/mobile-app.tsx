@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileDashboard } from "@/components/mobile/dashboard/mobile-dashboard";
+import { TypeListScreen } from "@/components/mobile/dashboard/type-list-screen";
 import { MobileHistory } from "@/components/mobile/history/mobile-history";
 import { MobileReports } from "@/components/mobile/reports/mobile-reports";
 import { MobileRecurring } from "@/components/mobile/recurring/mobile-recurring";
@@ -13,9 +14,19 @@ import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MoreScreen } from "@/components/mobile/more/more-screen";
 import { MobileTransactionForm } from "@/components/mobile/transaction-form/mobile-transaction-form";
 import { Button } from "@/components/ui/button";
-import { VIEWS, mobileFormParam, type View } from "@/lib/dashboard-url";
+import { categoryOf, type CategoryType } from "@/lib/budget";
+import { isPiggyBreak } from "@/lib/categories";
+import {
+  DEFAULT_VIEW,
+  VIEWS,
+  adjacentView,
+  mobileFormParam,
+  type Screen,
+  type View,
+} from "@/lib/dashboard-url";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import type { DashboardUrl } from "@/lib/hooks/use-dashboard-url";
+import { useViewSwipe } from "@/lib/hooks/use-view-swipe";
 import { useVisited } from "@/lib/hooks/use-visited";
 
 const VIEW_TITLES: Record<View, string> = {
@@ -25,28 +36,61 @@ const VIEW_TITLES: Record<View, string> = {
   raporty: "Raporty",
 };
 
+const LIST_SCREENS: Record<CategoryType, Screen> = {
+  przychod: "przychody",
+  wydatek: "wydatki",
+};
+
 // Korzeń wersji mobilnej. `data-ui="mobile"` włącza tokeny wyglądu z
 // `app/globals.css`, więc komponenty `ui/` dostają tu nowy wygląd, a desktop
-// zostaje bez zmian. Widok, okres, formularz i ekran „Więcej” są w URL.
+// zostaje bez zmian. Widok, okres, formularz i ekrany na pełnym ekranie są
+// w URL. Przesunięcie w bok po treści przełącza widok.
 export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) {
-  const { period, selectPeriod, monthTransactions, loading, loadError, refresh } =
-    useBudgetData();
+  const {
+    period,
+    selectPeriod,
+    monthTransactions,
+    categoryById,
+    loading,
+    loadError,
+    refresh,
+  } = useBudgetData();
   // Ukryte widoki zostają zamontowane od pierwszej wizyty (jak zakładki na PC).
   const visited = useVisited(url.view);
 
   // Formularz z URL. Edycja tylko dla wpisu z pobranego miesiąca: gdy go nie ma
-  // (stary link, inny miesiąc, wpis usunięty), parametr znika. Zlecenia
-  // sprawdza `RecurringFormRoute` (po doczytaniu listy zleceń).
+  // (stary link, inny miesiąc, wpis usunięty) albo to rozbicie skarbonki (można
+  // je tylko usunąć), parametr znika. Zlecenia sprawdza `RecurringFormRoute`
+  // (po doczytaniu listy zleceń).
   const { form, closeOverlay } = url;
   const editId = form?.kind === "transaction" ? form.id : null;
-  const editing = editId ? monthTransactions.find((t) => t.id === editId) : undefined;
+  const editing = monthTransactions.find(
+    (t) => t.id === editId && !isPiggyBreak(categoryOf(t, categoryById))
+  );
   const formInvalid = editId !== null && !loading && !editing;
   useEffect(() => {
     if (formInvalid) closeOverlay();
   }, [formInvalid, closeOverlay]);
 
+  const { screen } = url;
+  const swipe = useViewSwipe({
+    enabled: !form && !screen,
+    onSwipe: (step) => {
+      const next = adjacentView(url.view, step);
+      if (next) url.setView(next);
+    },
+  });
+
+  const listType: CategoryType | null =
+    screen === "przychody" ? "przychod" : screen === "wydatki" ? "wydatek" : null;
+
   const views: Record<View, ReactNode> = {
-    kokpit: <MobileDashboard />,
+    kokpit: (
+      <MobileDashboard
+        onOpenList={(type) => url.openScreen(LIST_SCREENS[type])}
+        onAdd={(type) => url.openForm({ kind: "transaction", id: null, type })}
+      />
+    ),
     historia: (
       <MobileHistory
         filters={url.filters}
@@ -72,6 +116,7 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
         period={period}
         onPeriodChange={selectPeriod}
         onOpenMore={() => url.openScreen("wiecej")}
+        onBack={url.view === DEFAULT_VIEW ? undefined : url.goBack}
       />
 
       {loading && (
@@ -102,7 +147,10 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
       )}
 
       {/* Odstęp pod treścią na dolną nawigację z wystającym „+”. */}
-      <main className="flex flex-1 flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      <main
+        {...swipe}
+        className="flex flex-1 touch-pan-y flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]"
+      >
         {VIEWS.map(
           (view) =>
             visited.has(view) && (
@@ -131,7 +179,7 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
           mode={
             editing
               ? { kind: "edit", transaction: editing }
-              : { kind: "create", type: "wydatek" }
+              : { kind: "create", type: form.type ?? "wydatek" }
           }
           onClose={closeOverlay}
         />
@@ -141,7 +189,15 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
         <RecurringFormRoute id={form.id} onClose={closeOverlay} />
       )}
 
-      {url.screen === "wiecej" && <MoreScreen login={login} onClose={closeOverlay} />}
+      {listType && (
+        <TypeListScreen
+          type={listType}
+          onEdit={(id) => url.openForm({ kind: "transaction", id })}
+          onClose={closeOverlay}
+        />
+      )}
+
+      {screen === "wiecej" && <MoreScreen login={login} onClose={closeOverlay} />}
     </div>
   );
 }

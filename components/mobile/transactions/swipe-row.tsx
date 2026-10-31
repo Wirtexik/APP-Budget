@@ -9,12 +9,13 @@ import { categoryStyle } from "@/lib/category-style";
 import { useSwipeReveal } from "@/lib/hooks/use-swipe-reveal";
 import { cn } from "@/lib/utils";
 
-/** Dwa przyciski po 72 px. */
-const ACTIONS_WIDTH = 144;
+/** Szerokość jednego przycisku akcji. */
+const ACTION_WIDTH = 72;
 
 // Wiersz transakcji (ekran 2 makiety): dotknięcie otwiera edycję, przesunięcie
 // w lewo odsłania „Edytuj” i „Usuń”. Akcje są zawsze w DOM, więc działają też
-// z klawiatury i czytnika ekranu – fokus na nich odsłania wiersz.
+// z klawiatury i czytnika ekranu – fokus na nich odsłania wiersz. Bez `onEdit`
+// (wpis rozbicia skarbonki) zostaje samo „Usuń”, także pod dotknięciem.
 export function SwipeRow({
   transaction,
   category,
@@ -30,13 +31,14 @@ export function SwipeRow({
   showDate?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
 }) {
+  const actionsWidth = ACTION_WIDTH * (onEdit ? 2 : 1);
   const { offset, dragging, handlers } = useSwipeReveal({
     open,
     onOpenChange,
-    actionsWidth: ACTIONS_WIDTH,
+    actionsWidth,
   });
   const { icon: Icon, color } = category
     ? categoryStyle(category)
@@ -60,9 +62,9 @@ export function SwipeRow({
     <li data-swipe-id={transaction.id} onBlur={handleBlur} className="relative overflow-hidden">
       <button
         type="button"
-        aria-label={`Edytuj: ${label}${transaction.description ? `, ${transaction.description}` : ""}`}
+        aria-label={`${onEdit ? "Edytuj" : "Usuń"}: ${label}${transaction.description ? `, ${transaction.description}` : ""}`}
         {...handlers}
-        onClick={onEdit}
+        onClick={onEdit ?? onDelete}
         style={{ transform: `translateX(${offset}px)` }}
         className={cn(
           "relative z-10 flex w-full touch-pan-y items-center gap-3 bg-card px-4 py-3 text-left outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
@@ -94,17 +96,19 @@ export function SwipeRow({
         </span>
       </button>
 
-      <div className="absolute inset-y-0 right-0 flex" style={{ width: ACTIONS_WIDTH }}>
-        <button
-          type="button"
-          aria-label={`Edytuj: ${label}`}
-          onFocus={() => onOpenChange(true)}
-          onClick={() => act(onEdit)}
-          className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-xs font-medium text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
-        >
-          <Pencil className="size-4.5" />
-          Edytuj
-        </button>
+      <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
+        {onEdit && (
+          <button
+            type="button"
+            aria-label={`Edytuj: ${label}`}
+            onFocus={() => onOpenChange(true)}
+            onClick={() => act(onEdit)}
+            className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-xs font-medium text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          >
+            <Pencil className="size-4.5" />
+            Edytuj
+          </button>
+        )}
         <button
           type="button"
           aria-label={`Usuń: ${label}`}

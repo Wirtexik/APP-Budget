@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skarbonka – makieta (J2)</title>
+<style>
+  :root {
+    --background: #f3f2f9; --foreground: #1e1b2e; --card: #ffffff; --muted: #ece9f7;
+    --muted-foreground: #6b6880; --primary: #8b5cf6; --border: #e4e1ef;
+    --income: #34d399; --income-strong: #059669; --income-text: #047857;
+    --glass: rgb(255 255 255 / 0.65); --glass-border: rgb(255 255 255 / 0.85);
+    --glow: rgb(139 92 246 / 0.35); --shadow-soft: 0 12px 32px -16px rgb(76 61 140 / 0.25);
+    --gradient-primary: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+    --seg-1: #c4b5fd; --seg-2: #a78bfa; --seg-3: #8b5cf6; --seg-4: #6366f1;
+    --page: #e7e5f0; --root-bg: var(--background);
+  }
+  .dark {
+    --background: #12122a; --foreground: #eeedf7; --card: #1c1b3a; --muted: #26244a;
+    --muted-foreground: #a3a1c2; --primary: #a78bfa; --border: rgb(255 255 255 / 0.08);
+    --income: #10b981; --income-strong: #047857; --income-text: #34d399;
+    --glass: rgb(30 27 75 / 0.55); --glass-border: rgb(255 255 255 / 0.1);
+    --glow: rgb(168 85 247 / 0.45); --shadow-soft: 0 12px 32px -16px rgb(0 0 0 / 0.6);
+    --seg-1: #4c3d99; --seg-2: #6d5bd0; --seg-3: #8b5cf6; --seg-4: #a78bfa;
+    --page: #08081a; --root-bg: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--page);
+    color: var(--foreground); padding: 24px; transition: background .2s;
+  }
+  .toolbar { display: flex; gap: 12px; align-items: center; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+  .toolbar h1 { font-size: 20px; margin-right: 12px; color: var(--foreground); }
+  .toolbar button {
+    border: 0; border-radius: 12px; padding: 10px 16px; font: inherit; font-weight: 600;
+    background: var(--card); color: var(--foreground); box-shadow: var(--shadow-soft); cursor: pointer;
+  }
+  .phones { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .col > h2 { font-size: 16px; color: var(--foreground); }
+  .col > p.note { max-width: 375px; font-size: 13px; color: var(--muted-foreground); text-align: center; line-height: 1.45; }
+  .phone {
+    position: relative; width: 375px; height: 780px; border-radius: 44px; overflow: hidden;
+    background: var(--root-bg); border: 10px solid #111; box-shadow: 0 30px 60px -20px rgb(0 0 0 / .4);
+  }
+  .screen { height: 100%; overflow-y: auto; padding: 14px 16px 32px; scrollbar-width: none; }
+  .topbar svg { width: 24px; height: 24px; }
+  .topbar { display: flex; align-items: center; gap: 6px; padding: 10px 0 14px; font-size: 18px; font-weight: 600; }
+  .group-title { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted-foreground); padding: 0 8px 8px; }
+  .glass-card {
+    border-radius: 24px; border: 1px solid var(--glass-border); background: var(--glass);
+    box-shadow: var(--shadow-soft); backdrop-filter: blur(24px);
+  }
+  .card { border-radius: 16px; background: var(--card); box-shadow: var(--shadow-soft); overflow: hidden; }
+  .stack { display: flex; flex-direction: column; gap: 22px; }
+  .muted { color: var(--muted-foreground); }
+  .amount { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -.01em; }
+  .eye {
+    display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+    border-radius: 999px; border: 0; background: var(--muted); color: var(--foreground); cursor: pointer;
+  }
+  .eye svg { width: 20px; height: 20px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 50px;
+    border-radius: 16px; border: 0; font: inherit; font-weight: 600; font-size: 16px; cursor: pointer;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn-primary { background: var(--gradient-primary); color: #fff; box-shadow: 0 10px 28px -10px var(--glow); }
+  .btn-soft { background: var(--muted); color: var(--foreground); }
+  svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Historia rozbitych skarbonek – wspólna dla wszystkich propozycji. */
+  .history li { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+  .history ul { padding: 0; }
+  .history li + li { border-top: 1px solid var(--border); }
+  .history .ic {
+    flex-shrink: 0; width: 42px; height: 42px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--income) 18%, transparent); color: var(--income-text);
+  }
+  .history .ic svg { width: 20px; height: 20px; }
+  .history .t { flex: 1; min-width: 0; }
+  .history .t b { display: block; font-weight: 600; }
+  .history .t span { display: block; font-size: 13px; }
+  .history .a { font-weight: 600; color: var(--income-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Propozycja A – duża świnka */
+  .pig-wrap { position: relative; width: 260px; margin: 0 auto; }
+  .pig-wrap svg.pig { width: 100%; display: block; filter: drop-shadow(0 16px 24px var(--glow)); }
+  .pig-text { position: absolute; left: 10%; right: 10%; top: 45%; text-align: center; color: #fff; pointer-events: none; }
+  .pig-text small { display: block; font-size: 12px; font-weight: 500; opacity: .85; }
+  .pig-text .amount { font-size: 28px; }
+
+  /* Propozycja B – pierścień wrzuceń */
+  .ring-wrap { position: relative; width: 220px; height: 220px; margin: 0 auto; }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ring-center .pigicon { width: 34px; height: 34px; color: var(--primary); }
+  .ring-center .amount { font-size: 26px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: var(--muted); }
+  .legend i { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+
+  /* Propozycja C – karta kompaktowa */
+  .compact { background: var(--gradient-primary); color: #fff; border-radius: 24px; padding: 18px; box-shadow: 0 14px 32px -14px var(--glow); position: relative; overflow: hidden; }
+  .compact .bgpig { position: absolute; right: -22px; top: 64px; width: 110px; height: 110px; opacity: .14; color: #fff; }
+  .compact .row { display: flex; align-items: center; justify-content: space-between; position: relative; }
+  .compact .eye { background: rgb(255 255 255 / .2); color: #fff; }
+  .compact .amount { font-size: 34px; margin-top: 6px; position: relative; }
+  .compact .meta { font-size: 13px; opacity: .85; margin-top: 2px; position: relative; }
+  .compact .btn { margin-top: 16px; background: rgb(255 255 255 / .2); color: #fff; position: relative; }
+  .chev-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; font-weight: 600; }
+
+  /* Panel potwierdzenia „Rozbij” */
+  .scrim { position: absolute; inset: 0; background: rgb(0 0 0 / .4); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 28px 28px 0 0;
+    padding: 10px 20px 28px; transform: translateY(100%); transition: transform .25s ease-out; text-align: center;
+  }
+  .phone.sheet-open .scrim { opacity: 1; pointer-events: auto; }
+  .phone.sheet-open .sheet { transform: none; }
+  .handle { width: 44px; height: 5px; border-radius: 9px; background: var(--border); margin: 0 auto 18px; }
+  .sheet .big { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: #fff; }
+  .sheet .big svg { width: 32px; height: 32px; }
+  .sheet h3 { font-size: 20px; margin-bottom: 6px; }
+  .sheet p { font-size: 14px; line-height: 1.45; margin-bottom: 18px; }
+  .sheet .btns { display: flex; flex-direction: column; gap: 10px; }
+</style>
+<style>
+  .phones { max-width: 1660px; margin: 0 auto; }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); margin-left: 6px; vertical-align: middle; }
+  /* D – kontur świnki */
+  .outline-wrap { position: relative; width: 250px; margin: 0 auto; }
+  .outline-wrap svg { width: 100%; display: block; }
+  .outline-text { position: absolute; left: 8%; right: 16%; top: 50%; text-align: center; }
+  .outline-text small { display: block; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+  .outline-text .amount { font-size: 26px; }
+  /* E – słoik */
+  .jar-wrap { position: relative; width: 190px; margin: 0 auto; }
+  .jar-wrap svg { width: 100%; display: block; }
+  .jar-label { position: absolute; left: 22%; right: 22%; top: 38%; padding: 8px 4px; border-radius: 12px; background: var(--card); text-align: center; box-shadow: var(--shadow-soft); }
+  .jar-label small { display: block; font-size: 11px; color: var(--muted-foreground); }
+  .jar-label .amount { font-size: 19px; }
+  /* F – kłódka */
+  .lock-btn { width: 96px; height: 96px; border-radius: 999px; border: 0; margin: 4px auto 0; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: #fff; box-shadow: 0 14px 30px -10px var(--glow); cursor: pointer; transition: transform .15s; }
+  .lock-btn:active { transform: scale(.95); }
+  .lock-btn svg { width: 40px; height: 40px; }
+  .lock-hint { font-size: 12px; text-align: center; margin-top: 8px; }
+  /* G – wiersze jak w „Więcej” */
+  .rows .r { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; }
+  .rows .r + .r { border-top: 1px solid var(--border); }
+  .rows .badge { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); flex-shrink: 0; }
+  .rows .badge svg { width: 20px; height: 20px; }
+  .rows .eye { width: 40px; height: 40px; background: transparent; color: var(--muted-foreground); }
+  .rows .action { justify-content: center; font-weight: 600; color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); cursor: pointer; gap: 8px; }
+  .rows .action svg { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>Skarbonka – makieta (J2)</h1>
+    <button id="theme">Motyw: jasny</button>
+    <button id="maskAll">Pokaż wszystkie kwoty</button>
+  </div>
+  <div class="phones" id="phones"></div>
+
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#6366f1"/>
+      </linearGradient>
+      <g id="piggy">
+        <path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"/>
+        <path d="M16 10h.01"/><path d="M2 8v1a2 2 0 0 0 2 2h1"/>
+      </g>
+      <g id="hammer">
+        <path d="m15 12-9.373 9.373a1 1 0 0 1-3.001-3L12 9"/><path d="m18 15 4-4"/>
+        <path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"/>
+      </g>
+      <g id="eye">
+        <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/>
+        <circle cx="12" cy="12" r="3"/>
+      </g>
+      <g id="eye-off">
+        <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/>
+        <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
+        <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/>
+        <path d="m2 2 20 20"/>
+      </g>
+      <g id="back"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></g>
+      <g id="lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></g>
+      <g id="lock-open"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></g>
+      <g id="coins"><path d="M13.744 17.736a6 6 0 1 1-7.48-7.48"/><path d="M15 6h1v4"/><path d="m6.134 14.768.866-.5 2 3.464"/><circle cx="16" cy="8" r="6"/></g>
+      <clipPath id="jarClip"><rect x="22" y="52" width="146" height="160" rx="34"/></clipPath>
+    </defs>
+  </svg>
+
+<script>
+  const AMOUNT = "650,00 zł";
+  const MASK = "••••• zł";
+  const PIG = "M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z";
+  const icon = (id, style = "") => `<svg class="i" viewBox="0 0 24 24" style="${style}"><use href="#${id}"/></svg>`;
+  const eyeBtn = (extra = "") => `<button class="eye ${extra}" data-eye aria-label="Pokaż kwotę">${icon("eye")}</button>`;
+  const amountSpan = (value = AMOUNT, style = "") => `<span class="amount" data-amount data-value="${value}" style="${style}">${MASK}</span>`;
+  const topBar = `<div class="topbar">${icon("back")} Więcej</div>`;
+  const meta = `od 4 sierpnia · 3 wrzucenia`;
+  const rows = [
+    ["15 marca 2026", "od 4 września 2025 · 7 wrzuceń", "+1 240,00 zł"],
+    ["2 sierpnia 2025", "od 11 maja 2025 · 3 wrzucenia", "+600,00 zł"],
+    ["30 kwietnia 2025", "od 3 stycznia 2025 · 5 wrzuceń", "+850,00 zł"],
+  ];
+  // Rozwijana historia (z propozycji C) – wspólna dla wszystkich.
+  const history = (open = false) => `
+    <section class="history">
+      <div class="card">
+        <div class="chev-row" data-toggle-history style="cursor:pointer">
+          <span>Rozbite skarbonki <span class="muted" style="font-weight:500">(3)</span></span>
+          <span class="muted" data-chev>${open ? "⌄" : "›"}</span>
+        </div>
+      </div>
+      <div data-history ${open ? "" : "hidden"} style="margin-top:12px">
+        <div class="card"><ul>${rows.map(([d, s, a]) => `
+          <li><span class="ic">${icon("hammer")}</span>
+          <span class="t"><b>${d}</b><span class="muted">${s}</span></span><span class="a">${a}</span></li>`).join("")}
+        </ul></div>
+      </div>
+    </section>`;
+  const sheet = `
+    <div class="scrim" data-close></div>
+    <div class="sheet">
+      <div class="handle"></div>
+      <div class="big">${icon("hammer")}</div>
+      <h3>Rozbić skarbonkę?</h3>
+      <p class="muted"><b style="color:var(--foreground)">${AMOUNT}</b> wróci do budżetu jako przychód „Ze skarbonki” z dzisiejszą datą. Kolejne wrzucenia zaczną nową skarbonkę.</p>
+      <div class="btns">
+        <button class="btn btn-primary" data-close>Rozbij</button>
+        <button class="btn btn-soft" data-close>Anuluj</button>
+      </div>
+    </div>`;
+  const screen = (top) => `${topBar}<div class="stack"><section><h3 class="group-title">Skarbonka</h3>${top}</section>${history(false)}</div>`;
+  const footer = (rozbij = "Rozbij skarbonkę") => `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+      <span class="muted" style="font-size:13px">${meta}</span>${eyeBtn()}
+    </div>
+    <button class="btn btn-primary" data-open style="margin-top:12px">${icon("hammer")} ${rozbij}</button>`;
+
+  const coinsSvg = (list) => list.map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="15" ry="6" fill="#fbbf24" stroke="#d97706" stroke-width="1.5"/>`).join("");
+  const COINS = coinsSvg([[50,196],[78,200],[108,197],[138,199],[64,180],[94,183],[124,180],[150,184],[40,182],[80,165],[112,166],[140,166],[56,164],[100,150],[128,151],[70,149]]);
+  const COINS_FEW = coinsSvg([[50,198],[80,201],[110,198],[140,200],[66,186],[96,188],[126,186]]);
+  const PINK = "color-mix(in srgb, #f472b6 45%, transparent)";
+  const overlay = (style, label = "W skarbonce", color = "") =>
+    `<div style="position:absolute;text-align:center;${style}"><small style="display:block;font-size:12px;font-weight:500;${color ? `color:${color};opacity:.85` : "color:var(--muted-foreground)"}">${label}</small>${amountSpan(AMOUNT, `font-size:24px;${color ? `color:${color}` : ""}`)}</div>`;
+  const card = (inner, foot = footer()) => `<div class="glass-card" style="padding:18px 16px 16px">${inner}${foot}</div>`;
+  const S = `stroke="url(#grad)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"`;
+
+  // Świnka J z parametrami: rx/ry = szerokość/wysokość tułowia (oryginał: koło r=66).
+  function jPig({ rx, ry }) {
+    const cx = 98, cy = 84;
+    const top = cy - ry, bottom = cy + ry;
+    const ex = cx + 0.4 * rx, ey = cy - ry * 0.86;
+    const sx = cx + rx - 16, sy = cy - 15;
+    const legY = bottom - 14, legH = Math.max(152 - legY, 20);
+    const legs = [cx - 0.45 * rx - 11, cx + 0.3 * rx - 11]
+      .map((x) => `<rect x="${x}" y="${legY}" width="22" height="${legH}" rx="9" fill="#6366f1"/>`).join("");
+    const tx = cx - rx + 6;
+    const svg = `
+      <svg viewBox="0 0 200 160" style="width:100%;display:block;filter:drop-shadow(0 14px 22px var(--glow))">
+        ${legs}
+        <path d="M${tx} ${cy} q-16 0 -14 -14 q2 -9 10 -5 q6 4 -2 9" fill="none" stroke="#a855f7" stroke-width="6" stroke-linecap="round"/>
+        <path d="M${ex - 16} ${ey + 6} C${ex - 14} ${ey - 16} ${ex - 6} ${ey - 28} ${ex + 2} ${ey - 26} C${ex + 10} ${ey - 18} ${ex + 16} ${ey - 6} ${ex + 18} ${ey + 6} Z" fill="#9b5cf6"/>
+        <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#grad)"/>
+        <rect x="${sx}" y="${sy}" width="36" height="32" rx="14" fill="#c4b5fd"/>
+        <circle cx="${sx + 12}" cy="${sy + 16}" r="3.4" fill="#6d28d9"/><circle cx="${sx + 24}" cy="${sy + 16}" r="3.4" fill="#6d28d9"/>
+        <circle cx="${cx + 0.62 * rx}" cy="${cy - 0.4 * ry}" r="5" fill="#fff"/>
+        <rect x="${cx - 22}" y="${top + 7}" width="34" height="6" rx="3" fill="rgb(255 255 255 / .5)"/>
+      </svg>`;
+    const textTop = (cy / 160) * 100 - 10;
+    return card(`<div style="position:relative;width:250px;margin:0 auto">${svg}
+      ${overlay(`left:12%;right:18%;top:${textTop}%`, "W skarbonce", "#fff")}</div>`);
+  }
+
+  const proposals = [
+    { group: "Skarbonka w „Więcej”", title: "J2. Płaska świnka", tag: "wybrana 2026-10-31", note: "Tułów 70 × 54. Kwota domyślnie ukryta, oko ją odsłania; „Rozbij” otwiera panel potwierdzenia; historia rozbitych skarbonek się zwija.", top: jPig({ rx: 70, ry: 54 }) },
+  ];
+
+  const root = document.getElementById("phones");
+  root.style.display = "block";
+  let phones, group;
+  for (const p of proposals) {
+    if (p.group !== group) {
+      group = p.group;
+      root.insertAdjacentHTML("beforeend", `<h2 style="text-align:center;margin:28px 0 14px;font-size:22px">${group}</h2>`);
+      phones = document.createElement("div");
+      phones.className = "phones";
+      root.appendChild(phones);
+    }
+    const col = document.createElement("div");
+    col.className = "col";
+    col.innerHTML = `<h2>${p.title}<span class="tag">${p.tag}</span></h2>
+      <div class="phone"><div class="screen">${screen(p.top)}</div>${sheet}</div><p class="note">${p.note}</p>`;
+    phones.appendChild(col);
+  }
+
+  function setRevealed(scope, on) {
+    scope.querySelectorAll("[data-amount]").forEach((el) => (el.textContent = on ? el.dataset.value : MASK));
+    scope.querySelectorAll("[data-eye]").forEach((b) => {
+      b.innerHTML = b.hasAttribute("data-lock") ? icon(on ? "lock-open" : "lock") : icon(on ? "eye-off" : "eye");
+      b.setAttribute("aria-label", on ? "Ukryj kwotę" : "Pokaż kwotę");
+    });
+    scope.querySelectorAll("[data-lock-hint]").forEach((h) => (h.textContent = on ? "Dotknij, aby ukryć" : "Dotknij, aby zobaczyć"));
+    scope.dataset.revealed = on ? "1" : "";
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-eye],[data-open],[data-close],[data-toggle-history]");
+    if (!t) return;
+    const phone = t.closest(".phone");
+    if (t.matches("[data-eye]")) setRevealed(phone, !phone.dataset.revealed);
+    if (t.matches("[data-open]")) phone.classList.add("sheet-open");
+    if (t.matches("[data-close]")) phone.classList.remove("sheet-open");
+    if (t.matches("[data-toggle-history]")) {
+      const h = phone.querySelector("[data-history]");
+      h.hidden = !h.hidden;
+      phone.querySelector("[data-chev]").textContent = h.hidden ? "›" : "⌄";
+    }
+  });
+
+  const themeBtn = document.getElementById("theme");
+  themeBtn.onclick = () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    themeBtn.textContent = dark ? "Motyw: ciemny" : "Motyw: jasny";
+  };
+  const maskBtn = document.getElementById("maskAll");
+  let all = false;
+  maskBtn.onclick = () => {
+    all = !all;
+    document.querySelectorAll(".phone").forEach((ph) => setRevealed(ph, all));
+    maskBtn.textContent = all ? "Ukryj wszystkie kwoty" : "Pokaż wszystkie kwoty";
+  };
+</script>
+</body>
+</html>

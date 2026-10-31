@@ -1,36 +1,45 @@
 # Budżet
 
 Aplikacja do prowadzenia domowego budżetu: wydatki i przychody, kategorie,
-historia z edycją oraz raporty miesięczne. Zbudowana w Next.js (App Router)
-z backendem w Supabase.
+historia z wyszukiwaniem i filtrami, zlecenia stałe oraz raporty miesięczne
+i roczne. Dwie wersje interfejsu (komputerowa i mobilna) na wspólnych danych;
+na telefonie da się ją zainstalować jak aplikację (PWA). Zbudowana w Next.js
+(App Router) z backendem w Supabase.
 
 ## Funkcje
 
 - **Logowanie loginem i hasłem.** Supabase wymaga adresu e-mail, więc do loginu
   automatycznie dokładana jest domena `@budzet.local` (`lib/auth.ts`).
-- **Globalny filtr miesiąca i roku** u góry strony. Wszystkie dane (karty,
-  tabele, raporty) dotyczą wybranego miesiąca.
-- **Kokpit:** karty Saldo / Przychody / Wydatki, formularz wydatku, szybkie
-  dodawanie przychodu (przycisk „+”), zarządzanie kategoriami i 5 ostatnich
-  transakcji.
-- **Historia:** pełna lista transakcji miesiąca z edycją i usuwaniem,
-  wyszukiwarką (od pierwszej litery, początki wyrazów w opisie i kategorii),
-  menu „Filtry” (uznania, obciążenia, zlecenia stałe, kategorie) i „Sortuj”
-  (data, kwota).
+- **Wybór miesiąca i roku** dotyczy wszystkich widoków (karty, listy, raporty).
+  Widok, okres i filtry są w adresie URL, więc działa „Wstecz” i odświeżenie.
+- **Kokpit:** saldo, przychody, wydatki i wykorzystanie budżetu wybranego
+  miesiąca.
+- **Historia:** transakcje miesiąca z edycją i usuwaniem, wyszukiwarką (od
+  pierwszej litery, początki wyrazów w opisie i kategorii), filtrami (uznania,
+  obciążenia, zlecenia stałe, kategorie) i sortowaniem (data, kwota).
 - **Zlecenia stałe:** cykliczne wpisy (dziennie, co tydzień, co miesiąc, co
   rok) z wstrzymaniem, edycją i podglądem nadchodzących terminów. Wykonują się
   przy otwarciu aplikacji i raz dziennie przez `pg_cron`.
-- **Raporty:** wykres kołowy wydatków według kategorii oraz rozwijane drzewo
+- **Raporty:** wykorzystanie budżetu (miesiąc lub rok) i rozwijana struktura
   Wydatki / Przychody → kategorie → transakcje.
-- **Kategorie domyślne** (Jedzenie, Transport, Wynagrodzenie…) są zdefiniowane
-  w kodzie (`lib/categories.ts`) i trafiają do bazy dopiero przy pierwszym użyciu.
-  Kategorię z przypisanymi transakcjami nie da się usunąć.
-- Interfejs responsywny (mobile-first).
+- **Kategorie:** domyślne (Jedzenie, Transport, Wynagrodzenie…) są zdefiniowane
+  w kodzie (`lib/categories.ts`) i trafiają do bazy dopiero przy pierwszym
+  użyciu; własne można dodawać, edytować i usuwać. Kategorii z transakcjami
+  lub zleceniami nie da się usunąć.
+- **Dwie wersje interfejsu:** komputerowa (zakładki, tabele, okna dialogowe)
+  i mobilna (dolna nawigacja, formularze na pełnym ekranie, panele z dołu,
+  przesuwanie wierszy palcem). Wersja wybiera się sama wg szerokości ekranu
+  albo ręcznie: „Automatycznie / Komputerowa / Mobilna” w menu konta (komputer)
+  lub w ekranie „Więcej” (telefon).
+- **Motyw:** systemowy (jasny lub ciemny wg urządzenia) albo zawsze jasny.
+- **Instalacja na telefonie (PWA):** Android – Chrome, „Zainstaluj aplikację”;
+  iOS – Safari, „Udostępnij” → „Do ekranu początkowego”. Bez trybu offline.
 
 ## Stos technologiczny
 
 Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui
-(Base UI), Recharts, Sonner oraz Supabase (`@supabase/supabase-js`).
+(Base UI), Lucide, Recharts, Sonner oraz Supabase (`@supabase/supabase-js`).
+Testy: Vitest.
 
 ## Uruchomienie
 
@@ -81,25 +90,26 @@ Wymagania: Node.js 20+ i projekt w [Supabase](https://supabase.com).
 ## Struktura projektu
 
 ```
-app/
-  page.tsx            bramka sesji: niezalogowany trafia na /login
-  login/page.tsx      ekran logowania
-  layout.tsx          layout główny (czcionki, komunikaty Toaster)
+app/                  layout, strona główna (bramka sesji), /login, manifest PWA, ikony
 components/
-  dashboard/          komponenty ekranu głównego (Dashboard i jego części)
-  recurring/          zakładka „Zlecenia” (zlecenia stałe)
+  app-shell.tsx       wspólna podstawa: stan z URL, provider danych, wybór wersji
+  desktop/            wersja komputerowa (zakładki, tabele, okna dialogowe)
+  mobile/             wersja mobilna (powłoka, widoki, formularze, panele z dołu)
+  shared/             komponenty używane przez obie wersje
   ui/                 komponenty shadcn/ui
-lib/
-  auth.ts             login <-> e-mail (@budzet.local)
-  budget.ts           typy, formatowanie, daty, sumy
-  categories.ts       kategorie domyślne i budowa list wyboru
-  filters.ts          filtry i sortowanie Historii
-  recurring*.ts       zlecenia stałe: logika i zapytania
-  queries.ts          zapytania do Supabase (dane miesiąca, zapis wpisów)
-  supabase.ts         klient Supabase (tworzony przy pierwszym użyciu)
+lib/                  czysta logika (z testami Vitest), zapytania do Supabase
+  hooks/              provider danych i hooki wspólne dla obu wersji
+public/icons/         ikony PWA
+design/mobile/        makiety i grafiki wersji mobilnej (poza aplikacją)
 supabase/
-  schema.sql          przykładowy schemat bazy + RLS
+  schema.sql          schemat bazy + RLS
+  migrations/         zlecenia stałe, pg_cron
 ```
+
+Szczegóły (baza, przepływ danych, konwencje, wersja mobilna):
+[ARCHITECTURE.md](ARCHITECTURE.md). Zrobione etapy i decyzje: [PLAN.md](PLAN.md),
+historia wersji mobilnej: [ETAP4_MOBILE.md](ETAP4_MOBILE.md), otwarte zadania:
+[DO_ZROBIENIA.md](DO_ZROBIENIA.md).
 
 ## Uwagi
 

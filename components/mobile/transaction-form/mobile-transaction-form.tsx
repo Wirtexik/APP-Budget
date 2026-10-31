@@ -71,7 +71,8 @@ export function MobileTransactionForm({
         </Button>
       }
     >
-      <form id={formId} onSubmit={submit} className="flex flex-1 flex-col gap-6 pt-2">
+      {/* Zwięzła góra: typ, kwota i początek kafelków mieszczą się nad klawiaturą. */}
+      <form id={formId} onSubmit={submit} className="flex flex-1 flex-col gap-4 pt-1">
         <div
           role="group"
           aria-label="Typ transakcji"

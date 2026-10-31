@@ -9,7 +9,9 @@ import {
   Clapperboard,
   Coins,
   Gift,
+  Hammer,
   HeartPulse,
+  PiggyBank,
   Receipt,
   Tag,
   UtensilsCrossed,
@@ -44,9 +46,11 @@ const DEFAULT_STYLES: Record<string, CategoryStyle> = {
   Rachunki: { icon: Receipt, color: "#6366F1" },
   Rozrywka: { icon: Clapperboard, color: "#EC4899" },
   Zdrowie: { icon: HeartPulse, color: "#EF4444" },
+  Skarbonka: { icon: PiggyBank, color: "#8B5CF6" },
   Wynagrodzenie: { icon: Wallet, color: "#10B981" },
   Premia: { icon: Gift, color: "#A855F7" },
   "Inne przychody": { icon: Coins, color: "#14B8A6" },
+  "Ze skarbonki": { icon: Hammer, color: "#22C55E" },
 };
 
 export const FALLBACK_ICON = Tag;

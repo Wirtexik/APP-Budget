@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DeleteTransactionDrawer } from "@/components/mobile/delete-transaction-drawer";
 import { SwipeRow } from "@/components/mobile/transactions/swipe-row";
 import { categoryOf, currency, fromGrosze, type Id, type Transaction } from "@/lib/budget";
+import { isPiggyBreak } from "@/lib/categories";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import { dayLabel, groupByDay } from "@/lib/transaction-groups";
 
@@ -18,6 +19,7 @@ function signedTotal(grosze: number) {
 // Lista transakcji (ekran 2 makiety): pogrupowana po dniach albo – przy
 // sortowaniu po kwocie – jedna karta z datą w wierszu. Odsłonięty jest najwyżej
 // jeden wiersz; przewinięcie strony albo dotknięcie poza nim go zamyka.
+// Wpisu rozbicia skarbonki nie da się edytować – tylko usunąć (cofa rozbicie).
 export function MobileTransactionList({
   transactions,
   grouped = true,
@@ -54,20 +56,23 @@ export function MobileTransactionList({
 
   const rows = (items: Transaction[]) => (
     <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card shadow-(--shadow-soft)">
-      {items.map((t) => (
-        <SwipeRow
-          key={t.id}
-          transaction={t}
-          category={categoryOf(t, categoryById)}
-          showDate={!grouped}
-          open={openId === t.id}
-          onOpenChange={(open) =>
-            setOpenId((current) => (open ? t.id : current === t.id ? null : current))
-          }
-          onEdit={() => onEdit(t.id)}
-          onDelete={() => setDeleting(t)}
-        />
-      ))}
+      {items.map((t) => {
+        const category = categoryOf(t, categoryById);
+        return (
+          <SwipeRow
+            key={t.id}
+            transaction={t}
+            category={category}
+            showDate={!grouped}
+            open={openId === t.id}
+            onOpenChange={(open) =>
+              setOpenId((current) => (open ? t.id : current === t.id ? null : current))
+            }
+            onEdit={isPiggyBreak(category) ? undefined : () => onEdit(t.id)}
+            onDelete={() => setDeleting(t)}
+          />
+        );
+      })}
     </ul>
   );
 

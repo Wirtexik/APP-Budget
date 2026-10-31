@@ -6,8 +6,12 @@
 // poprzedniej zakładki. Okres i filtry podmieniają bieżący wpis (`replaceState`),
 // żeby przeglądanie miesięcy czy wpisywanie liter nie zaśmiecało historii.
 //
-// Nakładki wersji mobilnej (formularz, „Więcej”) też dodają wpis, ze znacznikiem
-// w `history.state`. Zamknięcie cofa wtedy historię (`history.back()`), więc
+// Wpis z przełączenia zakładki ma znacznik `view` w `history.state`: strzałka
+// „Wstecz” w nagłówku cofa wtedy historię, a bez niego (np. strona otwarta od
+// razu w Historii) przechodzi na Kokpit, zamiast wychodzić z aplikacji.
+//
+// Nakładki wersji mobilnej (formularz, ekrany na pełnym ekranie) też dodają
+// wpis, ze znacznikiem `overlay` w `history.state`. Zamknięcie cofa wtedy historię (`history.back()`), więc
 // systemowe „Wstecz” i przycisk zamknięcia działają tak samo. Bez znacznika
 // (np. odświeżona strona z `?formularz=nowy`) parametr znika przez `replaceState`.
 //
@@ -21,6 +25,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { currentPeriod, type Period } from "@/lib/budget";
 import {
+  DEFAULT_VIEW,
   dashboardSearch,
   parseDashboardSearch,
   type DashboardUrlState,
@@ -47,11 +52,18 @@ const getSearch = () => window.location.search;
 const getServerSearch = () => "";
 
 const OVERLAY_STATE = { overlay: true } as const;
+const VIEW_STATE = { view: true } as const;
 
 let closing = false;
 
-const isOverlayEntry = () =>
-  (window.history.state as { overlay?: unknown } | null)?.overlay === true;
+const entryState = () =>
+  window.history.state as { overlay?: unknown; view?: unknown } | null;
+const isOverlayEntry = () => entryState()?.overlay === true;
+const isViewEntry = () => entryState()?.view === true;
+
+// Podmiana wpisu zachowuje jego znacznik.
+const currentMarker = () =>
+  isOverlayEntry() ? OVERLAY_STATE : isViewEntry() ? VIEW_STATE : null;
 
 function update(
   patch: Partial<DashboardUrlState>,
@@ -68,9 +80,9 @@ function update(
   // Przekazujemy tylko własny znacznik: Next sam dokleja swój stan, a gdyby
   // dostał go od nas (`__NA`), pominąłby aktualizację routera.
   if (mode === "replace") {
-    window.history.replaceState(isOverlayEntry() ? OVERLAY_STATE : null, "", url);
+    window.history.replaceState(currentMarker(), "", url);
   } else {
-    window.history.pushState(mode === "overlay" ? OVERLAY_STATE : null, "", url);
+    window.history.pushState(mode === "overlay" ? OVERLAY_STATE : VIEW_STATE, "", url);
   }
   listeners.forEach((listener) => listener());
 }
@@ -81,8 +93,10 @@ export interface DashboardUrl extends DashboardUrlState {
   setFilters: (filters: HistoryFilters) => void;
   openForm: (form: MobileForm) => void;
   openScreen: (screen: Screen) => void;
-  /** Zamyka formularz i ekran „Więcej”. */
+  /** Zamyka formularz i ekran na pełnym ekranie. */
   closeOverlay: () => void;
+  /** Strzałka „Wstecz” w nagłówku: poprzedni widok albo Kokpit. */
+  goBack: () => void;
 }
 
 export function useDashboardUrl(): DashboardUrl {
@@ -121,6 +135,11 @@ export function useDashboardUrl(): DashboardUrl {
     }
   }, []);
 
+  const goBack = useCallback(() => {
+    if (isViewEntry()) window.history.back();
+    else update({ view: DEFAULT_VIEW }, "replace");
+  }, []);
+
   return {
     ...state,
     setView,
@@ -129,5 +148,6 @@ export function useDashboardUrl(): DashboardUrl {
     openForm,
     openScreen,
     closeOverlay,
+    goBack,
   };
 }

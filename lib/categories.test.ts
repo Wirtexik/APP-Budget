@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Category } from "@/lib/budget";
 import {
+  buildCategoryOptions,
   categoryUsageMessage,
   existingCategoryValue,
+  reservedCategoryMessage,
   sameCategory,
 } from "@/lib/categories";
 
@@ -57,5 +59,21 @@ describe("existingCategoryValue", () => {
   it("null dla nowej nazwy albo innego typu", () => {
     expect(existingCategoryValue([own], { name: "Pies", type: "wydatek" })).toBeNull();
     expect(existingCategoryValue([own], { name: "Kot", type: "przychod" })).toBeNull();
+  });
+});
+
+describe("skarbonka w kategoriach", () => {
+  it("„Skarbonka” jest w wydatkach, „Ze skarbonki” nie ma w przychodach", () => {
+    const labels = (type: "wydatek" | "przychod") =>
+      buildCategoryOptions([], type).defaults.map((o) => o.label);
+    expect(labels("wydatek")).toContain("Skarbonka");
+    expect(labels("przychod")).not.toContain("Ze skarbonki");
+  });
+
+  it("nie da się ręcznie utworzyć ani wybrać przychodu „Ze skarbonki”", () => {
+    const target = { name: " ze skarbonki ", type: "przychod" } as const;
+    expect(existingCategoryValue([], target)).toBeNull();
+    expect(reservedCategoryMessage(target)).not.toBeNull();
+    expect(reservedCategoryMessage({ name: "Ze skarbonki", type: "wydatek" })).toBeNull();
   });
 });

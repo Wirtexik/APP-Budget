@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clampOffset, settleOffset, swipeAxis } from "@/lib/swipe";
+import { clampOffset, settleOffset, swipeAxis, viewSwipeStep } from "@/lib/swipe";
 
 describe("swipeAxis", () => {
   it("drobny ruch nie rozstrzyga kierunku", () => {
@@ -37,5 +37,18 @@ describe("settleOffset", () => {
   it("przyciąga do szerokości akcji powyżej progu", () => {
     expect(settleOffset(-52, 128)).toBe(-128);
     expect(settleOffset(-500, 128)).toBe(-128);
+  });
+});
+
+describe("viewSwipeStep", () => {
+  it("w lewo – następny widok, w prawo – poprzedni", () => {
+    expect(viewSwipeStep(-80, 10)).toBe(1);
+    expect(viewSwipeStep(80, -10)).toBe(-1);
+  });
+
+  it("za krótko albo bardziej w pionie – bez zmiany", () => {
+    expect(viewSwipeStep(-59, 0)).toBeNull();
+    expect(viewSwipeStep(-80, 90)).toBeNull();
+    expect(viewSwipeStep(80, 80)).toBeNull();
   });
 });
