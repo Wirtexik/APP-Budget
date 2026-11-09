@@ -116,7 +116,7 @@ export function MobileTransactionForm({
         />
 
         <div className="mt-auto flex flex-col gap-3">
-          <label className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-card px-4 font-medium shadow-(--shadow-soft)">
+          <label className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-card px-4 font-medium shadow-(--shadow-soft) focus-within:ring-3 focus-within:ring-ring/50">
             Data
             <input
               type="date"

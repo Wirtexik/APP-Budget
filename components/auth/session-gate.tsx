@@ -37,15 +37,22 @@ export function SessionGate({ children }: { children: ReactNode }) {
     try {
       const supabase = getSupabase();
 
-      supabase.auth.getSession().then(({ data }) => {
-        if (cancelled) return;
-        if (!data.session) {
-          router.replace("/login");
-          return;
-        }
-        setSession(data.session);
-        setChecking(false);
-      });
+      supabase.auth
+        .getSession()
+        .then(({ data }) => {
+          if (cancelled) return;
+          if (!data.session) {
+            router.replace("/login");
+            return;
+          }
+          setSession(data.session);
+          setChecking(false);
+        })
+        // Uszkodzona sesja w pamięci przeglądarki – zamiast wiecznego
+        // „Ładowanie…” odsyłamy na logowanie.
+        .catch(() => {
+          if (!cancelled) router.replace("/login");
+        });
 
       // Reaguje na wylogowanie (także w innej karcie) i wygaśnięcie sesji.
       // Jedyne miejsce przekierowania na /login po wylogowaniu – przycisk
@@ -57,7 +64,14 @@ export function SessionGate({ children }: { children: ReactNode }) {
             setSession(null);
             router.replace("/login");
           } else {
-            setSession(next);
+            // Odświeżenie tokenu (co godzinę) daje nowy obiekt sesji tego samego
+            // użytkownika – aplikacja potrzebuje tylko jego id i e-maila, więc
+            // nie przerysowujemy wtedy całego drzewa.
+            setSession((prev) =>
+              prev?.user.id === next.user.id && prev.user.email === next.user.email
+                ? prev
+                : next
+            );
           }
         }
       );

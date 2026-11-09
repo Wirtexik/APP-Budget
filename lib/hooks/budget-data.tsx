@@ -18,6 +18,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type Context,
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
@@ -111,46 +112,49 @@ interface PiggyBankState {
   error: string | null;
 }
 
-interface ContextValue {
-  budget: BudgetData;
-  recurring: RecurringData;
-  yearly: YearlyData;
-  piggy: PiggyBankState & { breakCategoryId: Id | null };
-  requestRecurring: () => void;
-  requestYearly: () => void;
-  requestPiggy: () => void;
+// Osobny kontekst na każdą część danych: wczytanie zleceń, roku czy skarbonki
+// nie przerysowuje komponentów, które czytają tylko dane miesiąca (i odwrotnie).
+// `request` włącza leniwe pobieranie przy pierwszym użyciu hooka.
+interface Lazy<T> {
+  data: T;
+  request: () => void;
 }
 
-const BudgetDataContext = createContext<ContextValue | null>(null);
+const BudgetContext = createContext<BudgetData | null>(null);
+const RecurringContext = createContext<Lazy<RecurringData> | null>(null);
+const YearlyContext = createContext<Lazy<YearlyData> | null>(null);
+const PiggyContext = createContext<Lazy<PiggyState> | null>(null);
 
-function useBudgetContext() {
-  const value = useContext(BudgetDataContext);
+type PiggyState = PiggyBankState & { breakCategoryId: Id | null };
+
+function useRequired<T>(context: Context<T | null>): T {
+  const value = useContext(context);
   if (!value) {
     throw new Error("Hooki danych budżetu działają tylko wewnątrz <BudgetDataProvider>.");
   }
   return value;
 }
 
+function useLazy<T>(context: Context<Lazy<T> | null>): T {
+  const { data, request } = useRequired(context);
+  useEffect(request, [request]);
+  return data;
+}
+
 export function useBudgetData(): BudgetData {
-  return useBudgetContext().budget;
+  return useRequired(BudgetContext);
 }
 
 export function useRecurringData(): RecurringData {
-  const { recurring, requestRecurring } = useBudgetContext();
-  useEffect(requestRecurring, [requestRecurring]);
-  return recurring;
+  return useLazy(RecurringContext);
 }
 
 export function useYearlyData(): YearlyData {
-  const { yearly, requestYearly } = useBudgetContext();
-  useEffect(requestYearly, [requestYearly]);
-  return yearly;
+  return useLazy(YearlyContext);
 }
 
 export function usePiggyBankData(): PiggyBankData {
-  const { piggy, requestPiggy } = useBudgetContext();
-  useEffect(requestPiggy, [requestPiggy]);
-  const { entries, breakCategoryId, loading, error } = piggy;
+  const { entries, breakCategoryId, loading, error } = useLazy(PiggyContext);
   const summary = useMemo(
     () => summarizePiggyBank(entries, breakCategoryId, todayKey()),
     [entries, breakCategoryId]
@@ -373,12 +377,14 @@ export function BudgetDataProvider({
 
   // Bez kategorii skarbonki w bazie skarbonka jest pusta; do pierwszego
   // pobrania kategorii nie wiadomo jednak, czy istnieją – wtedy „ładowanie”.
-  const piggy = useMemo(
-    () =>
-      hasPiggyCategories
+  const piggy = useMemo<Lazy<PiggyState>>(
+    () => ({
+      data: hasPiggyCategories
         ? { ...piggyState, breakCategoryId: piggyBreakId }
         : { entries: [], loading, error: null, breakCategoryId: null },
-    [hasPiggyCategories, piggyState, piggyBreakId, loading]
+      request: requestPiggy,
+    }),
+    [hasPiggyCategories, piggyState, piggyBreakId, loading, requestPiggy]
   );
 
   const categoryById = useMemo(
@@ -386,27 +392,19 @@ export function BudgetDataProvider({
     [categories]
   );
 
-  const value = useMemo<ContextValue>(
+  const budget = useMemo<BudgetData>(
     () => ({
-      budget: {
-        userId,
-        period,
-        selectPeriod: onPeriodChange,
-        monthLabel: periodLabel(period),
-        categories,
-        categoryById,
-        monthTransactions,
-        loading,
-        loadError,
-        refresh,
-        afterSave,
-      },
-      recurring: { ...recurringState, afterChange },
-      yearly: { year, ...yearlyState },
-      piggy,
-      requestRecurring,
-      requestYearly,
-      requestPiggy,
+      userId,
+      period,
+      selectPeriod: onPeriodChange,
+      monthLabel: periodLabel(period),
+      categories,
+      categoryById,
+      monthTransactions,
+      loading,
+      loadError,
+      refresh,
+      afterSave,
     }),
     [
       userId,
@@ -419,18 +417,26 @@ export function BudgetDataProvider({
       loadError,
       refresh,
       afterSave,
-      recurringState,
-      afterChange,
-      year,
-      yearlyState,
-      piggy,
-      requestRecurring,
-      requestYearly,
-      requestPiggy,
     ]
   );
 
+  const recurring = useMemo<Lazy<RecurringData>>(
+    () => ({ data: { ...recurringState, afterChange }, request: requestRecurring }),
+    [recurringState, afterChange, requestRecurring]
+  );
+
+  const yearly = useMemo<Lazy<YearlyData>>(
+    () => ({ data: { year, ...yearlyState }, request: requestYearly }),
+    [year, yearlyState, requestYearly]
+  );
+
   return (
-    <BudgetDataContext.Provider value={value}>{children}</BudgetDataContext.Provider>
+    <BudgetContext.Provider value={budget}>
+      <RecurringContext.Provider value={recurring}>
+        <YearlyContext.Provider value={yearly}>
+          <PiggyContext.Provider value={piggy}>{children}</PiggyContext.Provider>
+        </YearlyContext.Provider>
+      </RecurringContext.Provider>
+    </BudgetContext.Provider>
   );
 }

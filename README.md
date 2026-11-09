@@ -31,7 +31,7 @@ na telefonie da się ją zainstalować jak aplikację (PWA). Zbudowana w Next.js
   przesuwanie wierszy palcem). Wersja wybiera się sama wg szerokości ekranu
   albo ręcznie: „Automatycznie / Komputerowa / Mobilna” w menu konta (komputer)
   lub w ekranie „Więcej” (telefon).
-- **Motyw:** systemowy (jasny lub ciemny wg urządzenia) albo zawsze jasny.
+- **Motyw:** systemowy (wg urządzenia), jasny albo ciemny.
 - **Instalacja na telefonie (PWA):** Android – Chrome, „Zainstaluj aplikację”;
   iOS – Safari, „Udostępnij” → „Do ekranu początkowego”. Bez trybu offline.
 
@@ -62,7 +62,7 @@ Wymagania: Node.js 20+ i projekt w [Supabase](https://supabase.com).
 3. Utwórz tabele i reguły RLS: wklej zawartość
    [`supabase/schema.sql`](supabase/schema.sql) w *SQL Editor* i uruchom.
    Potem, w kolejności nazw, uruchom pliki z
-   [`supabase/migrations/`](supabase/migrations/) (zlecenia stałe i `pg_cron`).
+   [`supabase/migrations/`](supabase/migrations/) (zlecenia stałe, `pg_cron`, ograniczenia, indeksy i optymalizacja RLS).
 
 4. Dodaj użytkownika w *Authentication → Users → Add user*. Adres e-mail musi
    mieć postać `login@budzet.local` (użytkownik wpisze w aplikacji tylko
@@ -103,12 +103,11 @@ public/icons/         ikony PWA
 design/mobile/        makiety i grafiki wersji mobilnej (poza aplikacją)
 supabase/
   schema.sql          schemat bazy + RLS
-  migrations/         zlecenia stałe, pg_cron
+  migrations/         zlecenia stałe, pg_cron, ograniczenia, indeksy, RLS
 ```
 
 Szczegóły (baza, przepływ danych, konwencje, wersja mobilna):
-[ARCHITECTURE.md](ARCHITECTURE.md). Zrobione etapy i decyzje: [PLAN.md](PLAN.md),
-historia wersji mobilnej: [ETAP4_MOBILE.md](ETAP4_MOBILE.md), otwarte zadania:
+[ARCHITECTURE.md](ARCHITECTURE.md). Otwarte zadania:
 [DO_ZROBIENIA.md](DO_ZROBIENIA.md).
 
 ## Uwagi

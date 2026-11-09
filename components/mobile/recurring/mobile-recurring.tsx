@@ -6,6 +6,9 @@ import { Plus } from "lucide-react";
 import { RecurringActionsDrawer } from "@/components/mobile/recurring/recurring-actions-drawer";
 import { RecurringCard } from "@/components/mobile/recurring/recurring-card";
 import { MobileUpcomingList } from "@/components/mobile/recurring/mobile-upcoming-list";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorAlert } from "@/components/shared/error-alert";
+import { ListSkeleton } from "@/components/shared/list-skeleton";
 import { Button } from "@/components/ui/button";
 import type { Id } from "@/lib/budget";
 import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
@@ -34,9 +37,7 @@ export function MobileRecurring({ onOpenForm }: { onOpenForm: (id: Id | null) =>
       </Button>
 
       {error && (
-        <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Nie udało się pobrać zleceń: {error}
-        </p>
+        <ErrorAlert>Nie udało się pobrać zleceń: {error}</ErrorAlert>
       )}
 
       {rules.length > 0 ? (
@@ -53,12 +54,14 @@ export function MobileRecurring({ onOpenForm }: { onOpenForm: (id: Id | null) =>
             />
           ))}
         </ul>
+      ) : loading ? (
+        <ListSkeleton rows={3} className="overflow-hidden rounded-2xl bg-card shadow-(--shadow-soft)" />
       ) : (
-        !loading &&
         !error && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Nie masz jeszcze zleceń stałych. Dodaj pierwsze, np. czynsz albo wypłatę.
-          </p>
+          <EmptyState
+            className="py-8"
+            title="Nie masz jeszcze zleceń stałych. Dodaj pierwsze, np. czynsz albo wypłatę."
+          />
         )
       )}
 

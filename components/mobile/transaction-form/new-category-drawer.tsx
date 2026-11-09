@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { TYPE_LABEL, type CategoryType } from "@/lib/budget";
 import { existingCategoryValue, userValue } from "@/lib/categories";
 import { useBudgetData } from "@/lib/hooks/budget-data";
+import { thrownMessage } from "@/lib/errors";
 import { insertCategory } from "@/lib/queries";
 
 // Szybkie dodanie kategorii z formularza transakcji (ekran 6 makiety). Typ
@@ -63,15 +64,19 @@ export function NewCategoryDrawer({
     }
 
     setSaving(true);
-    const created = await insertCategory(userId, { name, type });
-    if (created.error !== null) {
+    try {
+      const created = await insertCategory(userId, categories, { name, type });
+      if (created.error !== null) {
+        setError(created.error);
+        return;
+      }
+      await refresh();
+      finish(userValue({ id: created.id, name: name.trim(), type }));
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
+    } finally {
       setSaving(false);
-      setError(created.error);
-      return;
     }
-    await refresh();
-    setSaving(false);
-    finish(userValue({ id: created.id, name: name.trim(), type }));
   }
 
   return (

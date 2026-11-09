@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { BudgetGauge } from "@/components/shared/budget-gauge";
+import { ErrorAlert } from "@/components/shared/error-alert";
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { currency, formatDate, type CategoryType } from "@/lib/budget";
 import { useBudgetData, useYearlyData } from "@/lib/hooks/budget-data";
 import { groupTransactions, share } from "@/lib/report-groups";
@@ -131,9 +133,7 @@ export function ReportsTab() {
       </Tabs>
 
       {isYear && yearError && (
-        <p role="alert" className="text-sm text-destructive">
-          Nie udało się pobrać danych roku: {yearError}
-        </p>
+        <ErrorAlert>Nie udało się pobrać danych roku {currentYear}: {yearError}</ErrorAlert>
       )}
 
       <Card>
@@ -148,9 +148,18 @@ export function ReportsTab() {
         </CardHeader>
         <CardContent>
           {activeLoading ? (
-            <p className="py-10 text-center text-muted-foreground">
-              Ładowanie…
-            </p>
+            <div
+              role="status"
+              className="flex flex-col items-center gap-6 text-muted-foreground md:flex-row md:justify-around"
+            >
+              <span className="sr-only">Wczytywanie…</span>
+              <Skeleton className="size-56 rounded-full" />
+              <span className="flex w-full flex-col gap-3 md:max-w-sm">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <Skeleton key={i} className="h-4" />
+                ))}
+              </span>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-6 md:flex-row md:justify-around">
               <BudgetGauge
@@ -206,9 +215,11 @@ export function ReportsTab() {
         </CardHeader>
         <CardContent>
           {activeLoading ? (
-            <p className="py-6 text-center text-muted-foreground">
-              Ładowanie…
-            </p>
+            <div role="status" className="flex flex-col gap-4 py-2 text-muted-foreground">
+              <span className="sr-only">Wczytywanie…</span>
+              <Skeleton className="h-6" />
+              <Skeleton className="h-6" />
+            </div>
           ) : (
             <Accordion multiple>
               {TYPE_SECTIONS.map(({ type, title, Icon, amount, colors }) => {

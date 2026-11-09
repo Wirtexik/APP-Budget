@@ -1,5 +1,7 @@
 import { ArrowDown, ArrowUpRight, ChevronRight } from "lucide-react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { currency, type CategoryType } from "@/lib/budget";
 
 // Karty przychodów (nasycona zieleń z poświatą) i wydatków (szare „szkło”).
@@ -15,13 +17,15 @@ export function IncomeExpenseCards({
   loading: boolean;
   onOpen: (type: CategoryType) => void;
 }) {
-  const amount = (value: number) => (loading ? "…" : currency.format(value));
+  const label = (value: number) => (loading ? "wczytywanie" : currency.format(value));
+  const amount = (value: number) =>
+    loading ? <Skeleton className="my-1 h-5 w-24" /> : currency.format(value);
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <button
         type="button"
-        aria-label={`Przychody: ${amount(income)}. Pokaż listę`}
+        aria-label={`Przychody: ${label(income)}. Pokaż listę`}
         onClick={() => onOpen("przychod")}
         className="rounded-3xl bg-income p-4 text-left text-income-foreground shadow-[0_14px_32px_-14px_var(--income)] outline-none transition-transform focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
       >
@@ -37,7 +41,7 @@ export function IncomeExpenseCards({
 
       <button
         type="button"
-        aria-label={`Wydatki: ${amount(expenses)}. Pokaż listę`}
+        aria-label={`Wydatki: ${label(expenses)}. Pokaż listę`}
         onClick={() => onOpen("wydatek")}
         className="rounded-3xl border border-glass-border bg-foreground/[0.06] p-4 text-left shadow-(--shadow-soft) outline-none backdrop-blur-xl transition-transform focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
       >

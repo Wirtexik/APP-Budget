@@ -25,7 +25,7 @@ const END_OPTIONS: SegmentedOption<EndMode>[] = [
 
 const SECTION_TITLE = "mb-2 px-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase";
 const ROW =
-  "flex min-h-12 items-center justify-between gap-4 rounded-xl bg-card px-4 font-medium shadow-(--shadow-soft)";
+  "flex min-h-12 items-center justify-between gap-4 rounded-xl bg-card px-4 font-medium shadow-(--shadow-soft) focus-within:ring-3 focus-within:ring-ring/50";
 
 // Formularz z URL (`?formularz=zlecenie` / `zlecenie-<uuid>`). Otwarty z linku
 // sam doczytuje zlecenia; edycja zlecenia, którego nie ma, zamyka formularz.
@@ -160,7 +160,7 @@ function MobileRecurringForm({
                   disabled={saving}
                   onClick={() => selectSchedule(item.value)}
                   className={cn(
-                    "flex min-h-12 w-full items-center justify-between px-4 text-left outline-none focus-visible:bg-accent",
+                    "flex min-h-12 w-full items-center justify-between px-4 text-left outline-none focus-visible:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
                     selected && "font-semibold text-primary"
                   )}
                 >

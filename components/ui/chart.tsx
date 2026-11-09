@@ -38,6 +38,42 @@ function useChart() {
   return context
 }
 
+type Dimension = { width: number; height: number }
+
+// Rozmiar wykresu mierzony tutaj i podawany liczbowo zamiast „100%”. Widok
+// schowany przez `display: none` (zamontowane, nieaktywne widoki w obu
+// wersjach) ma rozmiar 0×0, a ResponsiveContainer ostrzega wtedy przy każdym
+// renderze; zerowy pomiar jest więc pomijany i wykres zachowuje ostatni rozmiar
+// (bez ponownej animacji po powrocie do widoku). Kontener musi mieć rozmiar
+// z klas (np. `aspect-square w-full`, `h-20 w-full`), nie z zawartości.
+function useChartSize(
+  ref: React.RefObject<HTMLDivElement | null>,
+  initialDimension: Dimension
+) {
+  const [size, setSize] = React.useState<Dimension>(initialDimension)
+
+  React.useLayoutEffect(() => {
+    const element = ref.current
+    if (!element || typeof ResizeObserver === "undefined") return
+    const update = (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return
+      const next = { width: Math.round(width), height: Math.round(height) }
+      setSize((prev) =>
+        prev.width === next.width && prev.height === next.height ? prev : next
+      )
+    }
+    const rect = element.getBoundingClientRect()
+    update(rect.width, rect.height)
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) update(entry.contentRect.width, entry.contentRect.height)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+
+  return size
+}
+
 function ChartContainer({
   id,
   className,
@@ -57,14 +93,17 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId()
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const size = useChartSize(containerRef, initialDimension)
 
   return (
     <ChartContext.Provider value={{ config }}>
       <div
+        ref={containerRef}
         data-slot="chart"
         data-chart={chartId}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "relative flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
         )}
         {...props}
@@ -72,6 +111,11 @@ function ChartContainer({
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer
           initialDimension={initialDimension}
+          width={size.width}
+          height={size.height}
+          // Poza przepływem: rozmiar kontenera wynika z jego klas, a wykres o
+          // stałych wymiarach nie blokuje zwężania rodzica (np. w flexie).
+          style={{ position: "absolute", top: 0, left: 0 }}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>

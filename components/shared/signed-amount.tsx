@@ -18,7 +18,7 @@ export function SignedAmount({
     <span
       className={cn(
         "tabular-nums whitespace-nowrap",
-        isIncome && "text-emerald-600",
+        isIncome && "text-emerald-700 dark:text-emerald-300",
         className
       )}
     >

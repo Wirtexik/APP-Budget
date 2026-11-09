@@ -12,6 +12,7 @@ import {
   type Transaction,
 } from "@/lib/budget";
 import { valueForCategory } from "@/lib/categories";
+import { thrownMessage } from "@/lib/errors";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import {
   insertTransaction,
@@ -132,17 +133,22 @@ export function useTransactionForm(mode: TransactionFormMode) {
     }
 
     setSaving(true);
-    const failure = await save(validation.value.amount, validation.value.categoryValue);
-    if (failure) {
-      setSaving(false);
-      setError(failure);
-      return false;
-    }
+    try {
+      const failure = await save(validation.value.amount, validation.value.categoryValue);
+      if (failure) {
+        setError(failure);
+        return false;
+      }
 
-    await afterSave(fields.date);
-    setSaving(false);
-    if (mode.kind === "create") reset();
-    return true;
+      await afterSave(fields.date);
+      if (mode.kind === "create") reset();
+      return true;
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
+      return false;
+    } finally {
+      setSaving(false);
+    }
   }
 
   return {

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import type { Category, CategoryType, Id } from "@/lib/budget";
 import { categoryUsageMessage } from "@/lib/categories";
+import { thrownMessage } from "@/lib/errors";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import {
   countCategoryUsage,
@@ -20,7 +21,7 @@ import {
 // startują z kategorii; `key` w rodzicu resetuje stan przy nowym otwarciu).
 // `submit` zwraca true po udanym zapisie; nowa kategoria czyści wtedy nazwę.
 export function useCategoryForm(category: Category | null) {
-  const { userId, refresh } = useBudgetData();
+  const { userId, categories, refresh } = useBudgetData();
   const [name, setName] = useState(category?.name ?? "");
   const [type, setType] = useState<CategoryType>(category?.type ?? "wydatek");
   const [error, setError] = useState<string | null>(null);
@@ -34,19 +35,24 @@ export function useCategoryForm(category: Category | null) {
     }
 
     setSaving(true);
-    const failure = category
-      ? await updateCategory(userId, category.id, { name, type })
-      : (await insertCategory(userId, { name, type })).error;
-    if (failure !== null) {
-      setSaving(false);
-      setError(failure);
-      return false;
-    }
+    try {
+      const failure = category
+        ? await updateCategory(userId, categories, category.id, { name, type })
+        : (await insertCategory(userId, categories, { name, type })).error;
+      if (failure !== null) {
+        setError(failure);
+        return false;
+      }
 
-    if (!category) setName("");
-    await refresh();
-    setSaving(false);
-    return true;
+      if (!category) setName("");
+      await refresh();
+      return true;
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
+      return false;
+    } finally {
+      setSaving(false);
+    }
   }
 
   return { name, setName, type, setType, error, setError, saving, submit };
@@ -68,30 +74,34 @@ export function useRemoveCategory() {
         duration: 7000,
       });
 
-    const usage = await countCategoryUsage(userId, category.id);
-    const usageMessage = categoryUsageMessage(usage);
+    try {
+      const usage = await countCategoryUsage(userId, category.id);
+      const usageMessage = categoryUsageMessage(usage);
 
-    if (usage.error) {
-      toast.error("Nie udało się sprawdzić, czy kategoria jest używana", {
-        description: usage.error,
-      });
-    } else if (usageMessage) {
-      blocked(usageMessage);
-    } else {
-      const { error, inUse } = await deleteCategory(userId, category.id);
-      if (inUse) {
-        blocked(
-          "Ma przypisane transakcje lub zlecenia stałe. Usuń je lub przenieś do innej kategorii i spróbuj ponownie."
-        );
-      } else if (error) {
-        toast.error("Nie udało się usunąć kategorii", { description: error });
+      if (usage.error) {
+        toast.error("Nie udało się sprawdzić, czy kategoria jest używana", {
+          description: usage.error,
+        });
+      } else if (usageMessage) {
+        blocked(usageMessage);
       } else {
-        toast.success(`Usunięto kategorię „${category.name}”`);
+        const { error, inUse } = await deleteCategory(userId, category.id);
+        if (inUse) {
+          blocked(
+            "Ma przypisane transakcje lub zlecenia stałe. Usuń je lub przenieś do innej kategorii i spróbuj ponownie."
+          );
+        } else if (error) {
+          toast.error("Nie udało się usunąć kategorii", { description: error });
+        } else {
+          toast.success(`Usunięto kategorię „${category.name}”`);
+        }
       }
+      await refresh();
+    } catch (thrown) {
+      toast.error("Nie udało się usunąć kategorii", { description: thrownMessage(thrown) });
+    } finally {
+      setRemovingId(null);
     }
-
-    await refresh();
-    setRemovingId(null);
   }
 
   return { removingId, remove };

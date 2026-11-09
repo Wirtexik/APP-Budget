@@ -139,14 +139,16 @@
   --card-foreground: #1e1b2e;
   --popover: #ffffff;
   --popover-foreground: #1e1b2e;
-  --primary: #8b5cf6;
+  /* #7c3aed zamiast #8b5cf6 z palety: kontrast tekstu ≥ 4,5 (WCAG AA) na tle i bieli. */
+  --primary: #7c3aed;
   --primary-foreground: #ffffff;
   --secondary: #ece9f7;
   --secondary-foreground: #2e2a47;
   --muted: #ece9f7;
-  --muted-foreground: #6b6880;
+  --muted-foreground: #656279;
   --accent: #ede7fe;
   --accent-foreground: #5b21b6;
+  --destructive: #d41f1f;
   --border: #e4e1ef;
   --input: #dcd8ea;
   --ring: #a78bfa;
@@ -165,7 +167,9 @@
   --glass: rgb(255 255 255 / 0.65);
   --glass-border: rgb(255 255 255 / 0.85);
   --glow: rgb(139 92 246 / 0.35);
-  --gradient-primary: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  /* Odcień ciemniejszy od ikony (#a855f7 → #6366f1), żeby biały tekst na
+     przyciskach miał kontrast ≥ 4,5 na całej długości gradientu. */
+  --gradient-primary: linear-gradient(135deg, #9645e8 0%, #5b5bea 100%);
   --shadow-soft: 0 12px 32px -16px rgb(76 61 140 / 0.25);
 }
 
@@ -184,6 +188,8 @@
   --muted-foreground: #a3a1c2;
   --accent: #2e2766;
   --accent-foreground: #ddd6fe;
+  /* Jak w .dark – jasna wartość z [data-ui="mobile"] nie może tu przeciec. */
+  --destructive: oklch(0.704 0.191 22.216);
   --border: rgb(255 255 255 / 0.08);
   --input: rgb(255 255 255 / 0.14);
   --ring: #8b5cf6;

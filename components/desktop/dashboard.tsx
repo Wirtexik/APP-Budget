@@ -18,6 +18,7 @@ import { ReportsTab } from "@/components/desktop/reports-tab";
 import { SummaryCards } from "@/components/desktop/summary-cards";
 import { TransactionForm } from "@/components/desktop/transaction-form";
 import { TransactionsTable } from "@/components/desktop/transactions-table";
+import { ErrorAlert } from "@/components/shared/error-alert";
 import { HistoryFilters } from "@/components/desktop/history-filters";
 import { RecurringTab } from "@/components/desktop/recurring/recurring-tab";
 import {
@@ -54,6 +55,7 @@ export function Dashboard({ login, url }: { login: string; url: DashboardUrl }) 
     monthTransactions,
     loading,
     loadError,
+    refresh,
   } = useBudgetData();
 
   // Transakcja czekająca na potwierdzenie usunięcia / edytowana w oknie.
@@ -115,9 +117,9 @@ export function Dashboard({ login, url }: { login: string; url: DashboardUrl }) 
         />
 
         {loadError && (
-          <p role="alert" className="text-sm text-destructive">
+          <ErrorAlert onRetry={() => void refresh()}>
             Nie udało się pobrać danych: {loadError}
-          </p>
+          </ErrorAlert>
         )}
 
         <Tabs

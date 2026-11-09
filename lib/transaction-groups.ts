@@ -1,6 +1,10 @@
 import {
+  DAY_MONTH,
+  DAY_MONTH_YEAR,
+  WEEKDAY,
   categoryOf,
   dateKey,
+  parseDateKey,
   toGrosze,
   type Category,
   type Id,
@@ -39,25 +43,18 @@ export function groupByDay(
   return groups;
 }
 
-const dayMonth = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long" });
-const dayMonthYear = new Intl.DateTimeFormat("pl-PL", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-const weekday = new Intl.DateTimeFormat("pl-PL", { weekday: "long" });
-
 // Nagłówek dnia na liście: „Dziś, 24 października”, „Wczoraj, 23 października”,
 // „Jutro, 25 października” (nadchodzące zlecenia), „środa, 21 października”;
 // rok tylko spoza bieżącego roku.
 export function dayLabel(date: string, today: Date) {
-  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
-  const day = new Date(y, m - 1, d);
+  const day = parseDateKey(date);
   const shifted = (days: number) =>
     dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days));
-  const text = (y === today.getFullYear() ? dayMonth : dayMonthYear).format(day);
+  const text = (day.getFullYear() === today.getFullYear() ? DAY_MONTH : DAY_MONTH_YEAR).format(
+    day
+  );
   if (date.slice(0, 10) === dateKey(today)) return `Dziś, ${text}`;
   if (date.slice(0, 10) === shifted(-1)) return `Wczoraj, ${text}`;
   if (date.slice(0, 10) === shifted(1)) return `Jutro, ${text}`;
-  return `${weekday.format(day)}, ${text}`;
+  return `${WEEKDAY.format(day)}, ${text}`;
 }

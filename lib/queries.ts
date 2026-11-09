@@ -16,6 +16,7 @@ import {
 import {
   DEFAULT_CATEGORIES,
   defaultValue,
+  duplicateCategoryMessage,
   reservedCategoryMessage,
   sameCategory,
   userValue,
@@ -95,15 +96,29 @@ export async function deleteTransaction(userId: string, id: Id) {
   return null;
 }
 
+// Komunikat, gdy nazwa kategorii jest pusta, zarezerwowana albo zajęta; null, gdy wolna.
+function categoryNameError(
+  categories: Category[],
+  fields: CategoryRef,
+  exceptId?: Id
+): string | null {
+  if (!fields.name.trim()) return "Podaj nazwę kategorii.";
+  return (
+    reservedCategoryMessage(fields) ??
+    duplicateCategoryMessage(categories, fields, exceptId)
+  );
+}
+
 // Zwraca id nowej kategorii, żeby formularz mógł ją od razu zaznaczyć.
+// `categories` – kategorie z bazy, do sprawdzenia duplikatów.
 export async function insertCategory(
   userId: string,
+  categories: Category[],
   fields: { name: string; type: CategoryType }
 ): Promise<Resolved> {
+  const invalid = categoryNameError(categories, fields);
+  if (invalid) return { id: null, error: invalid };
   const trimmed = fields.name.trim();
-  if (!trimmed) return { id: null, error: "Podaj nazwę kategorii." };
-  const reserved = reservedCategoryMessage(fields);
-  if (reserved) return { id: null, error: reserved };
 
   const { data, error } = await getSupabase()
     .from("categories")
@@ -116,13 +131,13 @@ export async function insertCategory(
 
 export async function updateCategory(
   userId: string,
+  categories: Category[],
   id: Id,
   fields: { name: string; type: CategoryType }
 ) {
+  const invalid = categoryNameError(categories, fields, id);
+  if (invalid) return invalid;
   const trimmed = fields.name.trim();
-  if (!trimmed) return "Podaj nazwę kategorii.";
-  const reserved = reservedCategoryMessage(fields);
-  if (reserved) return reserved;
 
   const { data, error } = await getSupabase()
     .from("categories")
