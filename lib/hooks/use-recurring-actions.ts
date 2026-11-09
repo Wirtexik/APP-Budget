@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import type { Id } from "@/lib/budget";
+import { thrownMessage } from "@/lib/errors";
 import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
 import type { RecurringRule } from "@/lib/recurring";
 import { deleteRecurringRule, setRecurringRuleActive } from "@/lib/recurring-queries";
@@ -20,18 +21,23 @@ export function useToggleRecurring() {
 
   async function toggleActive(rule: RecurringRule) {
     setBusyId(rule.id);
-    const failure = await setRecurringRuleActive(userId, rule.id, !rule.is_active);
-    if (failure) {
-      toast.error(failure);
-    } else {
-      toast.success(rule.is_active ? "Wstrzymano zlecenie" : "Wznowiono zlecenie", {
-        description: rule.is_active
-          ? "Do czasu wznowienia nie powstaną nowe transakcje."
-          : "Terminy z czasu przerwy zostały pominięte.",
-      });
-      await afterChange();
+    try {
+      const failure = await setRecurringRuleActive(userId, rule.id, !rule.is_active);
+      if (failure) {
+        toast.error(failure);
+      } else {
+        toast.success(rule.is_active ? "Wstrzymano zlecenie" : "Wznowiono zlecenie", {
+          description: rule.is_active
+            ? "Do czasu wznowienia nie powstaną nowe transakcje."
+            : "Terminy z czasu przerwy zostały pominięte.",
+        });
+        await afterChange();
+      }
+    } catch (thrown) {
+      toast.error(thrownMessage(thrown));
+    } finally {
+      setBusyId(null);
     }
-    setBusyId(null);
   }
 
   return { busyId, toggleActive };
@@ -47,15 +53,20 @@ export function useDeleteRecurring() {
   async function confirm(rule: RecurringRule) {
     setDeleting(true);
     setError(null);
-    const failure = await deleteRecurringRule(userId, rule.id);
-    if (failure) {
-      setDeleting(false);
-      setError(failure);
+    try {
+      const failure = await deleteRecurringRule(userId, rule.id);
+      if (failure) {
+        setError(failure);
+        return false;
+      }
+      await afterChange();
+      return true;
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
       return false;
+    } finally {
+      setDeleting(false);
     }
-    await afterChange();
-    setDeleting(false);
-    return true;
   }
 
   return { deleting, error, clearError: () => setError(null), confirm };

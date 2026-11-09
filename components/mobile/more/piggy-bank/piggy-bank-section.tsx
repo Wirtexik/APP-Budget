@@ -7,6 +7,8 @@ import { MORE_CARD } from "@/components/mobile/more/card";
 import { BreakPiggyBankDrawer } from "@/components/mobile/more/piggy-bank/break-piggy-bank-drawer";
 import { PiggyBankHistory } from "@/components/mobile/more/piggy-bank/piggy-bank-history";
 import { PiggySvg } from "@/components/mobile/more/piggy-bank/piggy-svg";
+import { ErrorAlert } from "@/components/shared/error-alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { currency } from "@/lib/budget";
 import { usePiggyBankData } from "@/lib/hooks/budget-data";
 import { piggyBankMeta } from "@/lib/piggy-bank";
@@ -26,9 +28,7 @@ export function PiggyBankSection() {
   const today = todayKey();
 
   const empty = current.amount <= 0;
-  const meta = loading
-    ? "Wczytywanie…"
-    : (piggyBankMeta(current, today) ?? "Pusta – wrzuć wydatek „Skarbonka”");
+  const meta = piggyBankMeta(current, today) ?? "Pusta – wrzuć wydatek „Skarbonka”";
   const EyeIcon = revealed ? EyeOff : Eye;
 
   return (
@@ -45,7 +45,16 @@ export function PiggyBankSection() {
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="min-w-0 text-sm text-muted-foreground">{meta}</span>
+          <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+            {loading ? (
+              <>
+                <Skeleton className="h-4 w-44" />
+                <span className="sr-only">Wczytywanie…</span>
+              </>
+            ) : (
+              meta
+            )}
+          </span>
           <button
             type="button"
             aria-label={revealed ? "Ukryj kwotę" : "Pokaż kwotę"}
@@ -58,9 +67,7 @@ export function PiggyBankSection() {
         </div>
 
         {error && (
-          <p role="alert" className="mt-2 text-sm text-destructive">
-            Nie udało się wczytać skarbonki: {error}
-          </p>
+          <ErrorAlert className="mt-2">Nie udało się pobrać skarbonki: {error}</ErrorAlert>
         )}
 
         <button

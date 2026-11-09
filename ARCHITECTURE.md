@@ -1,6 +1,6 @@
 # Architektura – Budżet
 
-Aplikacja do prowadzenia domowego budżetu (przychody, wydatki, kategorie, historia, raporty). Interfejs po polsku. Dwie wersje interfejsu na tej samej warstwie danych: komputerowa (zakładki, tabele, okna dialogowe) i mobilna (etap 4: dolna nawigacja, pełnoekranowe formularze, panele z dołu, gesty, PWA). Opis wersji mobilnej: sekcja „Wersja mobilna”, historia decyzji: [ETAP4_MOBILE.md](ETAP4_MOBILE.md).
+Aplikacja do prowadzenia domowego budżetu (przychody, wydatki, kategorie, historia, raporty). Interfejs po polsku. Dwie wersje interfejsu na tej samej warstwie danych: komputerowa (zakładki, tabele, okna dialogowe) i mobilna (etap 4: dolna nawigacja, pełnoekranowe formularze, panele z dołu, gesty, PWA). Opis wersji mobilnej: sekcja „Wersja mobilna”. Otwarte zadania: [DO_ZROBIENIA.md](DO_ZROBIENIA.md); przebieg zrobionych etapów 0–4 jest w historii gita (dawne `PLAN.md` i `ETAP4_MOBILE.md`).
 
 ## Stack
 
@@ -12,7 +12,7 @@ Aplikacja do prowadzenia domowego budżetu (przychody, wydatki, kategorie, histo
 
 ## Baza danych (Supabase)
 
-Źródło prawdy: [`supabase/schema.sql`](supabase/schema.sql) + migracje z `supabase/migrations/`. Plik odtworzony z prawdziwej bazy 2026-10-18 (kolumny, typy, wartości domyślne, RLS), klucze obce, CHECK i indeksy sprawdzone 2026-10-29.
+Źródło prawdy: [`supabase/schema.sql`](supabase/schema.sql) + migracje z `supabase/migrations/`. Plik odtworzony z prawdziwej bazy 2026-10-18 (kolumny, typy, wartości domyślne, RLS), klucze obce, CHECK i indeksy sprawdzone 2026-10-29. Migracja [`20261109120000_rls_indexes_hardening.sql`](supabase/migrations/20261109120000_rls_indexes_hardening.sql): polityki RLS z `(select auth.uid())` (liczone raz na zapytanie), indeksy `transactions (user_id, category_id)` i `recurring_rules (category_id)`, `CHECK (amount <= 99999999.99)` w `recurring_rules` (limit transakcji) oraz trigger `transactions_check_category` – transakcja może wskazywać tylko kategorię swojego użytkownika (klucz obcy nie widzi RLS; zlecenia mają to samo w `recurring_rules_before_write`).
 
 `user_id` w `categories` i `transactions` wskazuje na `auth.users` **bez `ON DELETE`**, więc konta z danymi nie da się usunąć w Auth, dopóki nie usunie się jego wierszy (`recurring_rules` ma `CASCADE`).
 
@@ -35,7 +35,7 @@ Zasady, na których opiera się cała aplikacja:
 - **RLS włączone na wszystkich tabelach**, polityka `for all` z warunkiem `auth.uid() = user_id`. To RLS jest prawdziwym zabezpieczeniem danych; klucz `anon` jest publiczny z założenia. Brak polityki `UPDATE`/`DELETE` nie zwraca błędu, tylko 0 wierszy – kod to wykrywa i pokazuje komunikat.
 - **Każda nowa tabela musi mieć jawne `GRANT`.** Od 30.10.2026 Supabase nie daje nowym tabelom w `public` domyślnego dostępu przez Data API – bez uprawnień aplikacja dostaje `permission denied`. Migracja tworząca tabelę kończy się więc poleceniem `grant select, insert, update, delete on table public.<tabela> to anon, authenticated, service_role;` (wzór: migracja `recurring_rules`). `GRANT` otwiera tylko dostęp do tabeli; to, które wiersze są widoczne, nadal ustala RLS, więc tabela potrzebuje obu.
 - **Autoryzacja:** użytkownik wpisuje sam login, a aplikacja loguje go przez `signInWithPassword` jako `login@budzet.local` (`lib/auth.ts`). Konta trzeba tworzyć w Supabase (Auth → Users) z takim adresem i opcją *Auto Confirm User*.
-- **Kategorie domyślne** (`DEFAULT_CATEGORIES` w `lib/categories.ts`) istnieją tylko w kodzie. Wiersz w bazie powstaje dopiero przy pierwszym użyciu (`ensureCategory` w `lib/queries.ts`). Kategorie z bazy pasujące nazwą i typem do domyślnych nie są „własne” – nie da się ich usunąć ani edytować. Wśród nich są kategorie skarbonki: „Skarbonka” (wydatek) i „Ze skarbonki” (przychód; tej drugiej nie ma na listach wyboru, a `insertCategory` / `updateCategory` nie pozwalają nadać jej nazwy własnej kategorii).
+- **Kategorie domyślne** (`DEFAULT_CATEGORIES` w `lib/categories.ts`) istnieją tylko w kodzie. Wiersz w bazie powstaje dopiero przy pierwszym użyciu (`ensureCategory` w `lib/queries.ts`). Kategorie z bazy pasujące nazwą i typem do domyślnych nie są „własne” – nie da się ich usunąć ani edytować. Wśród nich są kategorie skarbonki: „Skarbonka” (wydatek) i „Ze skarbonki” (przychód; tej drugiej nie ma na listach wyboru, a `insertCategory` / `updateCategory` nie pozwalają nadać jej nazwy własnej kategorii). `insertCategory` / `updateCategory` odrzucają też nazwę, która powieliłaby kategorię domyślną albo istniejącą tego samego typu (`duplicateCategoryMessage`, bez wielkości liter i spacji) – duplikat domyślnej byłby niewidoczny jako „własny”, a zapis wybierałby jeden z dwóch wierszy. Bazy to nie blokuje (mogą w niej być stare duplikaty), stąd wybór istniejącego `category_id` przy edycji z niezmienioną kategorią.
 - Kategorii z transakcjami lub zleceniami stałymi nie da się usunąć (sprawdzenie obu w `useRemoveCategory`, wspólnym dla obu wersji, + `RESTRICT` w bazie). Komunikat mówi, co blokuje usunięcie.
 
 ## Funkcje
@@ -71,15 +71,15 @@ Opisy poniżej dotyczą wersji komputerowej (poza „Wyborem wersji” i „Moty
 
 ## Wersja mobilna
 
-Korzeń to `MobileApp` (`components/mobile/mobile-app.tsx`), renderowany przez `AppShell` dla `variant === "mobile"`. Korzysta z tego samego providera danych, hooków i `lib/` co desktop; własne są tylko komponenty. Projekt: `design/mobile/` (rozmieszczenie z `makiety.tsx`, wygląd z `styl-kokpit.jpg`).
+Korzeń to `MobileApp` (`components/mobile/mobile-app.tsx`), renderowany przez `AppShell` dla `variant === "mobile"`. Korzysta z tego samego providera danych, hooków i `lib/` co desktop; własne są tylko komponenty. Projekt: `design/mobile/` (rozmieszczenie z `makiety.tsx`, wygląd z `styl-kokpit.jpg`, paleta ciemnego motywu z `ikona.svg`). Świadome odstępstwa od makiet: w nagłówku awatar zamiast „⋯” i bez dzwonka (brak powiadomień), pasek budżetu bez karty, typ w filtrach jako „Wszystkie / Uznania / Obciążenia”, w formularzu zlecenia kategorie jako kafelki i częstotliwość tylko z presetów (nietypowy harmonogram z bazy dalej widać na liście), „Nadchodzące” bez wstrzymanych zleceń, bez własnej klawiatury kwoty.
 
 **Powłoka.** `MobileHeader`: po lewej strzałka „Wstecz” (`url.goBack`; na Kokpicie ukryta), na środku „‹ październik 2026 ›” (strzałki przez `shiftPeriod`, gasną na końcu `YEAR_ITEMS`), dotknięcie nazwy otwiera `PeriodDrawer` (siatka 12 miesięcy, rok, „Bieżący miesiąc”); po prawej awatar otwierający „Więcej”; pod spodem duży tytuł widoku. „Wstecz” cofa historię, gdy bieżący wpis powstał z przełączenia zakładki (znacznik `{ view: true }` w `history.state`), a w przeciwnym razie (np. strona otwarta od razu w Historii) przechodzi na Kokpit przez `replaceState`, zamiast wychodzić z aplikacji. `BottomNav`: Kokpit, Historia, wystający „+” z podpisem „Dodaj” (nowa transakcja), Zlecenia, Raporty; przyciski min. 44×44 px. Widoki przełącza `url.setView` (`pushState`), ukryte zostają zamontowane od pierwszej wizyty (`useVisited`). Pasek błędu z „Spróbuj ponownie” i pasek wczytywania są na poziomie powłoki.
 
 **Widoki.**
-- *Kokpit*: karta salda ze „szkła” z wykresem salda dzień po dniu (`balanceSeries` w groszach, z pobranych transakcji miesiąca; do dziś w bieżącym miesiącu, do końca w minionych), karty przychodów i wydatków (dotknięcie otwiera listę wpisów miesiąca tego typu), przyciski „+ Wydatek” i „+ Przychód” (formularz z ustawionym typem), pasek wykorzystania budżetu (`budgetUsage`, wspólne z `BudgetGauge`). Bez ostatnich transakcji i zleceń.
-- *Historia*: wyszukiwarka i panel filtrów (`FiltersDrawer`, działa na żywo; licznik `drawerFilterCount`) na tej samej logice `lib/filters.ts` i tych samych parametrach URL co desktop. Lista pogrupowana po dniach z sumą dnia (`groupByDay`); przy sortowaniu po kwocie bez nagłówków dni, z datą w wierszu.
-- *Zlecenia*: karta na zlecenie z przełącznikiem wstrzymania i panelem akcji (`RecurringActionsDrawer`), pod kartami „Nadchodzące (30 dni)”. Akcje przez `useToggleRecurring` / `useDeleteRecurring`, formularz przez `useRecurringRuleForm` – wspólne z desktopem.
-- *Raporty*: Miesiąc/Rok (stan lokalny), `BudgetGauge` na całą szerokość karty, „Struktura transakcji” (typ → kategorie z udziałem i paskiem → wpisy), która jest zarazem legendą. Grupowanie: `groupTransactions` (`lib/report-groups.ts`), wspólne z desktopem.
+- *Kokpit*: karta salda ze „szkła” z wykresem salda dzień po dniu (`balanceSeries` w groszach, z pobranych transakcji miesiąca; do dziś w bieżącym miesiącu, do końca w minionych; kwota na karcie obejmuje cały miesiąc, także wpisy z późniejszą datą), karty przychodów i wydatków (dotknięcie otwiera listę wpisów miesiąca tego typu), przyciski „+ Wydatek” i „+ Przychód” (formularz z ustawionym typem), pasek wykorzystania budżetu (`budgetUsage`, wspólne z `BudgetGauge`). Bez ostatnich transakcji i zleceń.
+- *Historia*: wyszukiwarka i panel filtrów (`FiltersDrawer`, działa na żywo; licznik `drawerFilterCount`) na tej samej logice `lib/filters.ts` i tych samych parametrach URL co desktop. „Pokaż N wyników” tylko zamyka panel; „Wyczyść wszystko” w panelu (`clearDrawerFilters`) zostawia wyszukiwanie, „Wyczyść filtry” w pustym stanie czyści wszystko. Lista pogrupowana po dniach z sumą dnia (`groupByDay`); przy sortowaniu po kwocie bez nagłówków dni, z datą w wierszu.
+- *Zlecenia*: karta na zlecenie z przełącznikiem wstrzymania (dotknięcie karty = edycja, „⋯” = panel akcji `RecurringActionsDrawer`), pod kartami „Nadchodzące (30 dni)”. Akcje przez `useToggleRecurring` / `useDeleteRecurring`, formularz przez `useRecurringRuleForm` – wspólne z desktopem.
+- *Raporty*: Miesiąc/Rok (stan lokalny), `BudgetGauge` na całą szerokość karty, „Struktura transakcji” (typ → kategorie z udziałem i paskiem → wpisy), która jest zarazem legendą. Grupowanie: `groupTransactions` (`lib/report-groups.ts`), wspólne z desktopem; kolory nadaje widok (mobile z `categoryStyle`, desktop wg miejsca w rankingu). Na starcie rozwinięte Wydatki.
 - *Więcej* (nakładka): konto, skarbonka (niżej), kategorie (domyślne bez akcji, własne z edycją i usuwaniem przez `useCategoryForm` / `useRemoveCategory`), wygląd (System/Jasny/Ciemny), wersja interfejsu, wylogowanie.
 - *Przychody / Wydatki* (nakładka z kart Kokpitu, `TypeListScreen`): suma u góry i lista jak w Historii (dotknięcie = edycja, przesunięcie = akcje), z pobranego miesiąca przez `filterTransactions` z filtrem typu.
 
@@ -87,19 +87,19 @@ Korzeń to `MobileApp` (`components/mobile/mobile-app.tsx`), renderowany przez `
 
 **Nakładki w URL.** Formularz i ekrany na pełnym ekranie to nakładki sterowane parametrami `?formularz=nowy|nowy-przychod|<uuid>|zlecenie|zlecenie-<uuid>` (`nowy` = nowy wydatek) i `?ekran=wiecej|przychody|wydatki`. Otwarcie robi `pushState` ze znacznikiem `{ overlay: true }` w `history.state`, zamknięcie `history.back()`, więc systemowe „Wstecz” (gest na Androidzie) zamyka nakładkę zamiast wychodzić z aplikacji. Bez znacznika (odświeżona strona) parametr znika przez `replaceState`. Do `history.*State` przekazujemy tylko własny znacznik – Next dokleja swój stan sam, a z `__NA` od nas pominąłby aktualizację routera. `closeOverlay` jest odporne na podwójne wywołanie: drugie `history.back()` przed `popstate` jest pomijane. Edycja otwiera się tylko dla wpisu z pobranego miesiąca (zlecenia: po doczytaniu listy w `RecurringFormRoute`), inaczej parametr znika. Desktop czyści oba parametry.
 
-**Formularze na pełnym ekranie** (`FullScreen`, stopka „Zapisz” podnosi się nad klawiaturę iOS przez `useKeyboardInset` / `visualViewport`). Transakcja: na `useTransactionForm`, jak formularze desktopowe. Kwota w polu tekstowym z `inputMode="decimal"` (klawiatura systemowa, sprawdzona na iOS i Androidzie 2026-10-24); przy nowej transakcji pole dostaje fokus, ale klawiatura nie zasłania dalszych kroków: „Dalej” (`enterKeyHint="next"`, Enter nie wysyła formularza) i dotknięcie czegokolwiek poza polem tekstowym (kafelek, puste miejsce) ją chowają, a górna część (typ, kwota) jest zwięzła; `sanitizeAmountInput` zamienia kropkę na przecinek i przepuszcza tylko cyfry, jeden przecinek i 2 miejsca po nim, zakres sprawdza `parseAmount` przy zapisie. Przełącznik Wydatek/Przychód działa także w edycji (`setType`): zmiana typu czyści kategorię, powrót przywraca pierwotną; desktop nadal trzyma typ wpisu (wyrównanie w [DO_ZROBIENIA.md](DO_ZROBIENIA.md)). Kategorie jako kafelki; „+ Nowa” zapisuje przez `insertCategory` i od razu zaznacza nową, a nazwa istniejącej (`existingCategoryValue`) tylko ją zaznacza. Formularz zlecenia: kategorie jako kafelki, częstotliwość tylko z presetów.
+**Formularze na pełnym ekranie** (`FullScreen`, stopka „Zapisz” podnosi się nad klawiaturę iOS przez `useKeyboardInset` / `visualViewport`). Transakcja: na `useTransactionForm`, jak formularze desktopowe. Kwota w polu tekstowym z `inputMode="decimal"` (klawiatura systemowa, sprawdzona na iOS i Androidzie 2026-10-24); przy nowej transakcji pole dostaje fokus, ale klawiatura nie zasłania dalszych kroków: „Dalej” (`enterKeyHint="next"`, Enter nie wysyła formularza) i dotknięcie czegokolwiek poza polem tekstowym (kafelek, puste miejsce) ją chowają, a górna część (typ, kwota) jest zwięzła; separator na klawiaturze zależy od regionu telefonu, a na Androidzie klawiatura bywa szersza (np. `-`, spacja), dlatego `sanitizeAmountInput` zamienia kropkę na przecinek i przepuszcza tylko cyfry, jeden przecinek i 2 miejsca po nim, zakres sprawdza `parseAmount` przy zapisie. Przełącznik Wydatek/Przychód działa także w edycji (`setType`): zmiana typu czyści kategorię, powrót przywraca pierwotną; desktop nadal trzyma typ wpisu (wyrównanie w [DO_ZROBIENIA.md](DO_ZROBIENIA.md)). Kategorie jako kafelki; „+ Nowa” zapisuje przez `insertCategory` i od razu zaznacza nową, a nazwa istniejącej (`existingCategoryValue`) tylko ją zaznacza. Formularz zlecenia: kategorie jako kafelki, częstotliwość tylko z presetów.
 
 **Panele z dołu** (`components/ui/drawer.tsx`, `Drawer` z Base UI, z uchwytem i odstępem na `safe-area-inset-bottom`): wybór okresu, filtry, nowa/edytowana kategoria, akcje zlecenia i każde potwierdzenie usunięcia (transakcja, zlecenie, kategoria) z dwoma dużymi przyciskami. Renderują się w portalu, dlatego sam popup też ma `data-ui="mobile"`.
 
 **Gesty.** Wiersz transakcji przesunięty w lewo odsłania „Edytuj” i „Usuń” (jak w iOS Mail; wpis rozbicia skarbonki – samo „Usuń”). Czysta logika w `lib/swipe.ts` (kierunek po 8 px ruchu, pion oddaje gest przewijaniu; otwarcie po przekroczeniu 40% szerokości akcji), zdarzenia `pointer*` w `useSwipeReveal`, wiersz ma `touch-action: pan-y`. Odsłonięty jest najwyżej jeden wiersz, przewinięcie listy go zamyka, a dotknięcie odsłoniętego wiersza albo poza nim tylko go zamyka. Dotknięcie zamkniętego wiersza otwiera edycję. Akcje są też osiągalne bez gestu (fokus z klawiatury odsłania przyciski, czytnik ekranu widzi je z etykietami).
 
-Przesunięcie w bok po treści widoku (min. 60 px, `viewSwipeStep` w `lib/swipe.ts`) przełącza Kokpit ↔ Historia ↔ Zlecenia ↔ Raporty (`adjacentView`, kolejność z `BottomNav`) przez `url.setView`, jak dotknięcie ikony. Zdarzenia w `useViewSwipe` na `<main>` (`touch-action: pan-y`), tylko dotyk. Gest wiersza ma pierwszeństwo: przesunięcie zaczęte na `[data-swipe-id]` nie zmienia widoku. Nie działa przy otwartej nakładce, a gesty w panelach z dołu (portal, poza `<main>` w DOM) są pomijane.
+Przesunięcie w bok po treści widoku (min. 60 px, `viewSwipeStep` w `lib/swipe.ts`) przełącza Kokpit ↔ Historia ↔ Zlecenia ↔ Raporty (`adjacentView`, kolejność z `BottomNav`) przez `url.setView`, jak dotknięcie ikony. Celowo nie od krawędzi ekranu – tam koliduje z systemowym gestem „Wstecz” Androida. Zdarzenia w `useViewSwipe` na `<main>` (`touch-action: pan-y`), tylko dotyk. Gest wiersza ma pierwszeństwo: przesunięcie zaczęte na `[data-swipe-id]` nie zmienia widoku. Nie działa przy otwartej nakładce, a gesty w panelach z dołu (portal, poza `<main>` w DOM) są pomijane.
 
 **Ikony i kolory kategorii** (`lib/category-style.ts`): mapa w kodzie, baza bez zmian. Kategorie domyślne mają przypisaną ikonę Lucide i kolor; własne dostają ikonę ogólną i kolor z palety wyliczony z nazwy (bez wielkości liter i spacji, więc zawsze ten sam). Używane w listach, kafelkach, Raportach i „Więcej”.
 
-**Wygląd i tokeny.** Zmienne CSS w `app/globals.css` pod `[data-ui="mobile"]` (jasne) i `.dark [data-ui="mobile"]` (ciemne, z palety ikony: granat → indygo). Nadpisują m.in. `--primary`, `--background`, `--card`, `--radius`, więc komponenty `components/ui/` dostają w mobile nowy wygląd, a desktop się nie zmienia. Dodatkowe tokeny: `--income`, `--expense`, `--glass`, `--glass-border`, `--glow`, `--shadow-soft`, `--gradient-primary`. Wspólne małe komponenty mobilne: `Segmented` (przełącznik segmentowy) i `ToggleSwitch`.
+**Wygląd i tokeny.** Zmienne CSS w `app/globals.css` pod `[data-ui="mobile"]` (jasne) i `.dark [data-ui="mobile"]` (ciemne, z palety ikony: granat → indygo). Nadpisują m.in. `--primary`, `--background`, `--card`, `--radius`, więc komponenty `components/ui/` dostają w mobile nowy wygląd, a desktop się nie zmienia. Dodatkowe tokeny: `--income`, `--expense`, `--glass`, `--glass-border`, `--glow`, `--shadow-soft`, `--gradient-primary`. Wspólne małe komponenty mobilne: `Segmented` (przełącznik segmentowy) i `ToggleSwitch`. Kolory tekstu trzymają kontrast WCAG AA (≥ 4,5) w obu motywach: dlatego jasne `--primary` to `#7c3aed`, a `--gradient-primary` jest o odcień ciemniejszy niż w ikonie; `--destructive` ma osobną wartość w jasnym i ciemnym motywie mobile.
 
-**PWA.** `app/manifest.ts` (`/manifest.webmanifest`): „Budżet”, `display: "standalone"`, `lang: "pl"`, kolory z `THEME_COLORS.light` (jak `viewport`), ikony 192, 512 i maskable 512 w `public/icons/`. iOS: `metadata.appleWebApp` (`statusBarStyle: "default"`) i `app/apple-icon.png` (180 px, pełne tło, bez przezroczystości). PNG powstają jednorazowo skryptem `design/mobile/render-icons.sh` (Chrome headless), bo `next/og` nie obsługuje rozmycia z `ikona.svg`; `lib/manifest.test.ts` pilnuje, żeby ikony z manifestu istniały i miały zadeklarowany rozmiar. Bez trybu offline, service workera i powiadomień. Instalacja sprawdzona na Androidzie i iOS (2026-10-27).
+**PWA.** `app/manifest.ts` (`/manifest.webmanifest`): „Budżet”, `display: "standalone"`, `lang: "pl"`, kolory z `THEME_COLORS.light` (jak `viewport`), ikony 192, 512 i maskable 512 w `public/icons/`. iOS: `metadata.appleWebApp` (`statusBarStyle: "default"`) i `app/apple-icon.png` (180 px, pełne tło, bez przezroczystości). PNG powstają jednorazowo skryptem `design/mobile/render-icons.sh` (Chrome headless), bo `next/og` nie obsługuje rozmycia z `ikona.svg`; `lib/manifest.test.ts` pilnuje, żeby ikony z manifestu istniały i miały zadeklarowany rozmiar. Next 16 wypisuje `mobile-web-app-capable` zamiast `apple-mobile-web-app-capable`; iOS 16.4+ i tak bierze tryb `standalone` z manifestu. Bez trybu offline, service workera i powiadomień. Instalacja sprawdzona na Androidzie i iOS (2026-10-27).
 
 ## Struktura katalogów
 
@@ -143,16 +143,23 @@ components/
     reports/            Raporty: Miesiąc/Rok, oponka budżetu, report-structure.tsx
                         (typ → kategorie → wpisy, zarazem legenda)
   shared/               wspólne dla obu wersji, niezależne od układu: signed-amount.tsx,
-                        theme-toggle.tsx, budget-gauge.tsx (oponka budżetu w Raportach);
-                        trafia tu tylko to, czego używają obie wersje
+                        theme-toggle.tsx, budget-gauge.tsx (oponka budżetu w Raportach),
+                        error-alert.tsx (błąd wczytywania, opcjonalnie „Spróbuj ponownie”),
+                        empty-state.tsx (pusty stan listy), list-skeleton.tsx (szkielet
+                        listy w trakcie wczytywania); trafia tu tylko to, czego używają obie wersje
   ui/                   komponenty shadcn/ui (nie edytować ręcznie bez potrzeby),
                         m.in. dropdown-menu.tsx (Menu z Base UI), drawer.tsx (panel z dołu,
-                        Drawer z Base UI, z uchwytem i safe-area)
+                        Drawer z Base UI, z uchwytem i safe-area), skeleton.tsx (szkielet
+                        w kolorze `currentColor`, więc pasuje do każdej karty i motywu), chart.tsx (rozmiar
+                        wykresu mierzony samodzielnie i podawany liczbowo; zerowy pomiar
+                        w schowanym widoku jest pomijany, bez ostrzeżeń Recharts)
 lib/
   budget.ts             typy, formatowanie, okres (Period, currentPeriod), zakresy dat,
-                        kwoty i sumy w groszach (parseAmount, computeTotals)
+                        kwoty i sumy w groszach (parseAmount, computeTotals), wspólne
+                        formatery dat (DAY_MONTH, DAY_MONTH_YEAR, WEEKDAY, parseDateKey)
   categories.ts         kategorie domyślne, listy wyboru, komunikat o blokadzie usunięcia,
-                        istniejąca kategoria o nazwie (existingCategoryValue)
+                        istniejąca kategoria o nazwie (existingCategoryValue), blokada
+                        duplikatów (duplicateCategoryMessage)
   piggy-bank.ts         skarbonka: stan od ostatniego rozbicia i historia (summarizePiggyBank),
                         opisy dat i liczby wrzuceń
   amount-input.ts       czyszczenie wpisywanej kwoty w mobile (przecinek, 2 miejsca)
@@ -170,12 +177,15 @@ lib/
   dashboard-url.ts      stan widoku w URL: zakładka (VIEWS), okres, filtry, w mobile także
                         formularz (`formularz`) i ekran „Więcej” (`ekran`) (czysta logika)
   transaction-input.ts  walidacja formularza transakcji (czysta logika)
-  errors.ts             wspólne komunikaty błędów Supabase (errorMessage)
+  errors.ts             wspólne komunikaty błędów Supabase (errorMessage) i rzuconych
+                        wyjątków (thrownMessage – hooki zapisu łapią je w try/finally,
+                        żeby przycisk nie został zablokowany)
   theme.ts              motyw: wybór, rozwiązanie wg systemu, skrypt do <head>
   ui-variant.ts         wersja interfejsu: ręczny wybór vs szerokość ekranu, opcje przełącznika
   hooks/
     budget-data.tsx     BudgetDataProvider + useBudgetData / useRecurringData / useYearlyData /
-                        usePiggyBankData
+                        usePiggyBankData; osobny kontekst na każdą część danych, więc
+                        wczytanie zleceń, roku czy skarbonki nie przerysowuje reszty
     use-break-piggy-bank.ts  rozbicie skarbonki (przychód „Ze skarbonki” z dzisiejszą datą)
     use-transaction-form.ts  stan i zapis formularza transakcji (dodawanie i edycja);
                              `setType` (mobile) czyści kategorię, w edycji powrót ją przywraca
@@ -225,5 +235,4 @@ Przepływ danych:
 - **Limit wierszy PostgREST** (`max_rows`, domyślnie 1000): zapytanie, które może zwrócić więcej, pobiera dane partiami przez `range()` z pełnym sortowaniem (wspólne `fetchAllPages`, używane przez `fetchYearlyTransactions` i `fetchPiggyBankEntries`). Dane miesiąca idą jednym zapytaniem.
 - **Recharts** w ukrytym panelu/karcie ma szerokość 0 i nie rysuje wykresu – to nie błąd w kodzie.
 - Pakiet `cn` (od shadcn) zastępuje `clsx` + `tailwind-merge`; importuj `cn` z `@/lib/utils`.
-- Next.js w tej wersji różni się od starszych (patrz `AGENTS.md`) – przed pisaniem kodu zaglądaj do `node_modules/next/dist/docs/`.
-- Sprawdzenia: `npm run typecheck`, `npm run lint`, `npm test` (Vitest 4 – tylko `lib/**/*.test.ts`, bez Supabase), `npm run build`.
+- **Sprawdzenia** (każde zadanie zamyka się wszystkimi czterema): `npm run typecheck`, `npm run lint`, `npm test` (Vitest 4 – tylko `lib/**/*.test.ts`, bez Supabase), `npm run build`.

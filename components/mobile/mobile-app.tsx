@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { RefreshCw } from "lucide-react";
 
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileDashboard } from "@/components/mobile/dashboard/mobile-dashboard";
@@ -12,8 +11,8 @@ import { MobileRecurring } from "@/components/mobile/recurring/mobile-recurring"
 import { RecurringFormRoute } from "@/components/mobile/recurring/mobile-recurring-form";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MoreScreen } from "@/components/mobile/more/more-screen";
+import { ErrorAlert } from "@/components/shared/error-alert";
 import { MobileTransactionForm } from "@/components/mobile/transaction-form/mobile-transaction-form";
-import { Button } from "@/components/ui/button";
 import { categoryOf, type CategoryType } from "@/lib/budget";
 import { isPiggyBreak } from "@/lib/categories";
 import {
@@ -130,20 +129,9 @@ export function MobileApp({ login, url }: { login: string; url: DashboardUrl }) 
       )}
 
       {loadError && (
-        <div
-          role="alert"
-          className="mx-4 mb-2 flex items-center gap-3 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          <p className="flex-1">Nie udało się pobrać danych: {loadError}</p>
-          <Button
-            variant="destructive"
-            className="min-h-11 shrink-0"
-            onClick={() => void refresh()}
-          >
-            <RefreshCw />
-            Spróbuj ponownie
-          </Button>
-        </div>
+        <ErrorAlert className="mx-4 mb-2" onRetry={() => void refresh()}>
+          Nie udało się pobrać danych: {loadError}
+        </ErrorAlert>
       )}
 
       {/* Odstęp pod treścią na dolną nawigację z wystającym „+”. */}

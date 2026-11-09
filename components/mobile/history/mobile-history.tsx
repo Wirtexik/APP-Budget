@@ -5,6 +5,8 @@ import { Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 
 import { FiltersDrawer } from "@/components/mobile/history/filters-drawer";
 import { MobileTransactionList } from "@/components/mobile/transactions/mobile-transaction-list";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ListSkeleton } from "@/components/shared/list-skeleton";
 import { Button } from "@/components/ui/button";
 import type { Id } from "@/lib/budget";
 import {
@@ -52,12 +54,16 @@ export function MobileHistory({
       />
     );
   } else if (loading) {
-    content = null;
+    content = <ListSkeleton rows={6} className="overflow-hidden rounded-2xl bg-card shadow-(--shadow-soft)" />;
   } else if (monthTransactions.length === 0) {
     content = <EmptyState title="Brak transakcji w tym miesiącu." />;
   } else {
     content = (
-      <EmptyState title="Brak transakcji" description="Brak transakcji pasujących do filtrów.">
+      <EmptyState
+        icon={SearchX}
+        title="Brak transakcji"
+        description="Brak transakcji pasujących do filtrów."
+      >
         <Button
           variant="secondary"
           onClick={() => onFiltersChange(EMPTY_FILTERS)}
@@ -127,29 +133,6 @@ export function MobileHistory({
         onChange={onFiltersChange}
         resultCount={visible.length}
       />
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
-      {description && (
-        <span className="mb-2 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <SearchX className="size-6" />
-        </span>
-      )}
-      <p className={description ? "font-semibold" : "text-sm text-muted-foreground"}>{title}</p>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      {children && <div className="mt-4">{children}</div>}
     </div>
   );
 }

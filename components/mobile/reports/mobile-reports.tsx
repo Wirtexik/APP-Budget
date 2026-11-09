@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { ReportStructure } from "@/components/mobile/reports/report-structure";
 import { Segmented, type SegmentedOption } from "@/components/mobile/segmented";
 import { BudgetGauge } from "@/components/shared/budget-gauge";
+import { ErrorAlert } from "@/components/shared/error-alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useBudgetData, useYearlyData } from "@/lib/hooks/budget-data";
 import { groupTransactions } from "@/lib/report-groups";
 
@@ -48,13 +50,17 @@ export function MobileReports() {
       />
 
       {isYear && yearError && (
-        <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Nie udało się pobrać danych roku {year}: {yearError}
-        </p>
+        <ErrorAlert>Nie udało się pobrać danych roku {year}: {yearError}</ErrorAlert>
       )}
 
       {activeLoading ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">Ładowanie…</p>
+        <div role="status" className="flex flex-col gap-4 text-muted-foreground">
+          <span className="sr-only">Wczytywanie…</span>
+          <div className="flex justify-center rounded-3xl border border-glass-border bg-glass px-6 py-8 shadow-(--shadow-soft) backdrop-blur-xl">
+            <Skeleton className="size-48 rounded-full" />
+          </div>
+          <Skeleton className="h-40 rounded-3xl" />
+        </div>
       ) : (
         <>
           <section

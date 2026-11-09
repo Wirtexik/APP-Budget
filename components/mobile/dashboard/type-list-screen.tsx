@@ -4,6 +4,9 @@ import { useMemo } from "react";
 
 import { FullScreen } from "@/components/mobile/full-screen";
 import { MobileTransactionList } from "@/components/mobile/transactions/mobile-transaction-list";
+import { ListSkeleton } from "@/components/shared/list-skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   computeTotals,
   currency,
@@ -48,17 +51,24 @@ export function TypeListScreen({
         >
           <p className="text-sm text-muted-foreground">Suma · {periodLabel(period)}</p>
           <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
-            {loading ? "…" : currency.format(total)}
+            {loading ? (
+              <>
+                <Skeleton className="mx-auto my-1 h-7 w-36 rounded-lg" />
+                <span className="sr-only">Wczytywanie…</span>
+              </>
+            ) : (
+              currency.format(total)
+            )}
           </p>
         </section>
 
         {visible.length > 0 ? (
           <MobileTransactionList transactions={visible} onEdit={onEdit} />
         ) : (
-          !loading && (
-            <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
-              {empty}
-            </p>
+          loading ? (
+            <ListSkeleton className="overflow-hidden rounded-2xl bg-card shadow-(--shadow-soft)" />
+          ) : (
+            <EmptyState title={empty} />
           )
         )}
       </div>

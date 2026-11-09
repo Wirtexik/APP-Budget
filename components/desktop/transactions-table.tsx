@@ -4,6 +4,7 @@ import { Pencil, Repeat, Trash2 } from "lucide-react";
 
 import { SignedAmount } from "@/components/shared/signed-amount";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -19,6 +20,8 @@ import {
   type Transaction,
 } from "@/lib/budget";
 import { isPiggyBreak } from "@/lib/categories";
+
+const SKELETON_ROWS = 5;
 
 // Tabela transakcji z kolumną „Akcje” (edycja / usuwanie) – wspólna dla kokpitu i historii.
 // Wpis rozbicia skarbonki (mobile, „Więcej”) można tylko usunąć – cofa to rozbicie.
@@ -50,13 +53,34 @@ export function TransactionsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.length === 0 ? (
+        {transactions.length === 0 && loading ? (
+          Array.from({ length: SKELETON_ROWS }, (_, i) => (
+            <TableRow key={i} className="text-muted-foreground">
+              <TableCell>
+                {i === 0 && <span className="sr-only">Wczytywanie…</span>}
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+              <TableCell className="hidden sm:table-cell">
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="ml-auto h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="ml-auto h-7 w-16" />
+              </TableCell>
+            </TableRow>
+          ))
+        ) : transactions.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={5}
               className="h-24 text-center text-muted-foreground"
             >
-              {loading ? "Ładowanie…" : emptyText}
+              {emptyText}
             </TableCell>
           </TableRow>
         ) : (

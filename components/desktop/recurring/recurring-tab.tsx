@@ -7,6 +7,7 @@ import { DeleteRecurringDialog } from "@/components/desktop/recurring/delete-rec
 import { RecurringRuleDialog } from "@/components/desktop/recurring/recurring-rule-dialog";
 import { RecurringRulesList } from "@/components/desktop/recurring/recurring-rules-list";
 import { UpcomingList } from "@/components/desktop/recurring/upcoming-list";
+import { ErrorAlert } from "@/components/shared/error-alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,9 +44,7 @@ export function RecurringTab() {
   return (
     <div className="flex flex-col gap-6">
       {loadError && (
-        <p role="alert" className="text-sm text-destructive">
-          Nie udało się pobrać zleceń: {loadError}
-        </p>
+        <ErrorAlert>Nie udało się pobrać zleceń: {loadError}</ErrorAlert>
       )}
 
       <Card>

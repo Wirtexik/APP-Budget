@@ -74,11 +74,18 @@ const words = (value: string) =>
 
 // Każdy szukany wyraz musi być początkiem któregoś wyrazu w tekście:
 // „ki” znajdzie „Kino”, ale nie „Biedronka zakupy” (litery w środku wyrazu się nie liczą).
-export function matchesQuery(text: string, query: string) {
+// Zapytanie normalizujemy raz – `filterTransactions` sprawdza nim każdy wpis.
+function queryMatcher(query: string): (text: string) => boolean {
   const needles = words(query);
-  if (needles.length === 0) return true;
-  const haystack = words(text);
-  return needles.every((n) => haystack.some((w) => w.startsWith(n)));
+  if (needles.length === 0) return () => true;
+  return (text) => {
+    const haystack = words(text);
+    return needles.every((n) => haystack.some((w) => w.startsWith(n)));
+  };
+}
+
+export function matchesQuery(text: string, query: string) {
+  return queryMatcher(query)(text);
 }
 
 export function filterTransactions(
@@ -87,16 +94,14 @@ export function filterTransactions(
   filters: HistoryFilters
 ): Transaction[] {
   const selected = new Set(filters.categoryIds);
+  const matches = queryMatcher(filters.query);
 
   const filtered = transactions.filter((t) => {
     const category = categoryOf(t, categoryById);
     if (filters.type && category?.type !== filters.type) return false;
     if (filters.recurring && t.recurring_rule_id == null) return false;
     if (selected.size > 0 && (!t.category_id || !selected.has(t.category_id))) return false;
-    return matchesQuery(
-      `${t.description ?? ""} ${category?.name ?? ""}`,
-      filters.query
-    );
+    return matches(`${t.description ?? ""} ${category?.name ?? ""}`);
   });
 
   return sortTransactions(filtered, filters.sort);

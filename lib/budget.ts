@@ -63,6 +63,22 @@ export function formatDate(value: string) {
   return `${d}.${m}.${y}`;
 }
 
+// Data `RRRR-MM-DD` jako lokalna północ (bez przesunięcia o strefę czasową).
+export function parseDateKey(value: string) {
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Wspólne formatery dat („4 sierpnia”, „4 sierpnia 2025”, „środa”) – tworzenie
+// `Intl.DateTimeFormat` jest kosztowne, więc jedne na całą aplikację.
+export const DAY_MONTH = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long" });
+export const DAY_MONTH_YEAR = new Intl.DateTimeFormat("pl-PL", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+export const WEEKDAY = new Intl.DateTimeFormat("pl-PL", { weekday: "long" });
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 // Data w strefie lokalnej (toISOString przesunęłoby ją o strefę czasową).

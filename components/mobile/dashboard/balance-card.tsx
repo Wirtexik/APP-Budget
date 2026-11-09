@@ -4,6 +4,7 @@ import { useId } from "react";
 import { Area, AreaChart, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BalancePoint } from "@/lib/balance-series";
 import { currency } from "@/lib/budget";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,14 @@ export function BalanceCard({
             balance < 0 ? "text-destructive" : "text-primary"
           )}
         >
-          {loading ? "…" : currency.format(balance)}
+          {loading ? (
+            <>
+              <Skeleton className="mx-auto my-1 h-8 w-44 rounded-lg" />
+              <span className="sr-only">Wczytywanie…</span>
+            </>
+          ) : (
+            currency.format(balance)
+          )}
         </p>
       </div>
 

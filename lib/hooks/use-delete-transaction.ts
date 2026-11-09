@@ -6,6 +6,7 @@
 import { useState } from "react";
 
 import type { Transaction } from "@/lib/budget";
+import { thrownMessage } from "@/lib/errors";
 import { useBudgetData } from "@/lib/hooks/budget-data";
 import { deleteTransaction } from "@/lib/queries";
 
@@ -19,11 +20,17 @@ export function useDeleteTransaction() {
   async function confirm(transaction: Transaction) {
     setDeleting(true);
     setError(null);
-    const failure = await deleteTransaction(userId, transaction.id);
-    await refresh();
-    setDeleting(false);
-    if (failure) setError(failure);
-    return !failure;
+    try {
+      const failure = await deleteTransaction(userId, transaction.id);
+      await refresh();
+      if (failure) setError(failure);
+      return !failure;
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
+      return false;
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return { deleting, error, clearError: () => setError(null), confirm };

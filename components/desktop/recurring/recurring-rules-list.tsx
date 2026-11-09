@@ -2,6 +2,8 @@
 
 import { Pause, Pencil, Play, Trash2 } from "lucide-react";
 
+import { EmptyState } from "@/components/shared/empty-state";
+import { ListSkeleton } from "@/components/shared/list-skeleton";
 import { SignedAmount } from "@/components/shared/signed-amount";
 import { Button } from "@/components/ui/button";
 import { formatDate, type Category, type Id } from "@/lib/budget";
@@ -41,12 +43,12 @@ export function RecurringRulesList({
   onDelete: (rule: RecurringRule) => void;
 }) {
   if (rules.length === 0) {
+    if (loading) return <ListSkeleton rows={3} className="-mx-4" />;
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {loading
-          ? "Ładowanie…"
-          : "Nie masz jeszcze zleceń stałych. Dodaj pierwsze, np. czynsz albo wypłatę."}
-      </p>
+      <EmptyState
+        className="py-8"
+        title="Nie masz jeszcze zleceń stałych. Dodaj pierwsze, np. czynsz albo wypłatę."
+      />
     );
   }
 

@@ -19,14 +19,25 @@ const MESSAGES: Record<string, string> = {
 // fetch() przy braku sieci zgłasza TypeError, który supabase-js przekazuje jako `message`.
 const NETWORK_ERROR = /failed to fetch|networkerror|load failed|fetch failed/i;
 
+const NETWORK_MESSAGE =
+  "Brak połączenia z serwerem – sprawdź internet i spróbuj ponownie.";
+
 export function errorMessage(
   error: Pick<PostgrestError, "code" | "message">,
   overrides: ErrorOverrides = {}
 ): string {
   const known = overrides[error.code] ?? MESSAGES[error.code];
   if (known) return known;
-  if (NETWORK_ERROR.test(error.message)) {
-    return "Brak połączenia z serwerem – sprawdź internet i spróbuj ponownie.";
-  }
+  if (NETWORK_ERROR.test(error.message)) return NETWORK_MESSAGE;
   return error.message;
+}
+
+// Komunikat dla wyjątku rzuconego zamiast zwróconego błędu (np. zerwane
+// połączenie w trakcie zapytania). Hooki zapisu łapią go, żeby przycisk nie
+// został zablokowany na zawsze.
+export function thrownMessage(thrown: unknown): string {
+  const message = thrown instanceof Error ? thrown.message : String(thrown);
+  return NETWORK_ERROR.test(message)
+    ? NETWORK_MESSAGE
+    : "Coś poszło nie tak – spróbuj ponownie.";
 }

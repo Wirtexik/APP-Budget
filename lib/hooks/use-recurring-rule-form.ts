@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { parseAmount, type CategoryType } from "@/lib/budget";
 import { valueForCategory } from "@/lib/categories";
+import { thrownMessage } from "@/lib/errors";
 import { useBudgetData, useRecurringData } from "@/lib/hooks/budget-data";
 import { resolveCategory, type Resolved } from "@/lib/queries";
 import {
@@ -132,31 +133,35 @@ export function useRecurringRuleForm(rule: RecurringRule | null) {
     }
 
     setSaving(true);
+    try {
+      // Niezmieniona kategoria zachowuje dotychczasowy `category_id`
+      // (nazwa domyślnej kategorii mogłaby wskazywać inny, zdublowany wiersz).
+      const resolved: Resolved =
+        rule && categoryValue === initial.categoryValue
+          ? { id: rule.category_id, error: null }
+          : await resolveCategory(userId, categories, categoryValue);
 
-    // Niezmieniona kategoria zachowuje dotychczasowy `category_id`
-    // (nazwa domyślnej kategorii mogłaby wskazywać inny, zdublowany wiersz).
-    const resolved: Resolved =
-      rule && categoryValue === initial.categoryValue
-        ? { id: rule.category_id, error: null }
-        : await resolveCategory(userId, categories, categoryValue);
+      const payload = toRulePayload(input);
+      const failure =
+        resolved.error ??
+        (rule
+          ? await updateRecurringRule(userId, rule.id, resolved.id, payload)
+          : await insertRecurringRule(userId, resolved.id, payload));
 
-    const payload = toRulePayload(input);
-    const failure =
-      resolved.error ??
-      (rule
-        ? await updateRecurringRule(userId, rule.id, resolved.id, payload)
-        : await insertRecurringRule(userId, resolved.id, payload));
+      if (failure) {
+        setError(failure);
+        return false;
+      }
 
-    if (failure) {
-      setSaving(false);
-      setError(failure);
+      toast.success(isEdit ? "Zapisano zmiany zlecenia" : "Dodano zlecenie stałe");
+      await afterChange();
+      return true;
+    } catch (thrown) {
+      setError(thrownMessage(thrown));
       return false;
+    } finally {
+      setSaving(false);
     }
-
-    toast.success(isEdit ? "Zapisano zmiany zlecenia" : "Dodano zlecenie stałe");
-    await afterChange();
-    setSaving(false);
-    return true;
   }
 
   return {

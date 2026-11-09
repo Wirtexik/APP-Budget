@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorMessage } from "@/lib/errors";
+import { errorMessage, thrownMessage } from "@/lib/errors";
 
 describe("errorMessage", () => {
   it("tłumaczy znane kody", () => {
@@ -22,5 +22,16 @@ describe("errorMessage", () => {
 
   it("nieznany kod zostawia oryginalny komunikat", () => {
     expect(errorMessage({ code: "XX000", message: "internal" })).toBe("internal");
+  });
+});
+
+describe("thrownMessage", () => {
+  it("rozpoznaje brak sieci", () => {
+    expect(thrownMessage(new TypeError("Failed to fetch"))).toMatch(/Brak połączenia/);
+  });
+
+  it("inne wyjątki zamienia na ogólny komunikat", () => {
+    expect(thrownMessage(new Error("boom"))).toBe("Coś poszło nie tak – spróbuj ponownie.");
+    expect(thrownMessage("x")).toBe("Coś poszło nie tak – spróbuj ponownie.");
   });
 });

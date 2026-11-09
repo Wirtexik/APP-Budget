@@ -3,22 +3,21 @@
 import { useMemo } from "react";
 import { Repeat } from "lucide-react";
 
+import { EmptyState } from "@/components/shared/empty-state";
+import { ListSkeleton } from "@/components/shared/list-skeleton";
 import { SignedAmount } from "@/components/shared/signed-amount";
-import { formatDate, type Category } from "@/lib/budget";
+import { WEEKDAY, formatDate, parseDateKey, type Category } from "@/lib/budget";
 import {
   addDays,
   todayKey,
   type UpcomingOccurrence,
 } from "@/lib/recurring";
 
-const weekday = new Intl.DateTimeFormat("pl-PL", { weekday: "long" });
-
 // „dziś”, „jutro” albo nazwa dnia tygodnia.
 function dayLabel(key: string, today: string) {
   if (key === today) return "dziś";
   if (key === addDays(today, 1)) return "jutro";
-  const [y, m, d] = key.split("-").map(Number);
-  return weekday.format(new Date(y, m - 1, d));
+  return WEEKDAY.format(parseDateKey(key));
 }
 
 // Nadchodzące wykonania pogrupowane po dniu.
@@ -43,11 +42,8 @@ export function UpcomingList({
   }, [occurrences]);
 
   if (groups.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {loading ? "Ładowanie…" : "Brak zaplanowanych wykonań w tym okresie."}
-      </p>
-    );
+    if (loading) return <ListSkeleton rows={3} className="-mx-4" />;
+    return <EmptyState className="py-8" title="Brak zaplanowanych wykonań w tym okresie." />;
   }
 
   const today = todayKey();

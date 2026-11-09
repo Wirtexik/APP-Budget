@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { currency, type Totals } from "@/lib/budget";
 
 interface CardSpec {
@@ -98,7 +99,14 @@ export function SummaryCards({
           </CardHeader>
           <CardContent>
             <p className={`text-2xl font-semibold tabular-nums ${item.amount}`}>
-              {loading ? "…" : currency.format(item.value)}
+              {loading ? (
+                <>
+                  <Skeleton className="my-1 h-6 w-32" />
+                  <span className="sr-only">Wczytywanie…</span>
+                </>
+              ) : (
+                currency.format(item.value)
+              )}
             </p>
           </CardContent>
         </Card>

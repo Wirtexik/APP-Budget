@@ -19,6 +19,9 @@
 --   o 23:05 UTC (sama włącza rozszerzenie pg_cron)
 --   20261029120000_transactions_amount_check.sql – CHECK (amount > 0) i indeks
 --   (user_id, date) w transactions
+--   20261109120000_rls_indexes_hardening.sql – polityki RLS z (select auth.uid()),
+--   indeksy po category_id, limit kwoty zlecenia, trigger: transakcja tylko
+--   z własną kategorią
 
 create table if not exists public.categories (
   id         uuid primary key default gen_random_uuid(),
@@ -35,8 +38,8 @@ create table if not exists public.transactions (
   user_id     uuid not null references auth.users (id),
   -- bez ON DELETE, czyli NO ACTION: kategorii z transakcjami nie da się usunąć
   category_id uuid references public.categories (id),
-  -- numeric(10,2): maks. 99 999 999,99. W bazie nie ma CHECK (amount > 0),
-  -- dodatnią kwotę pilnuje tylko aplikacja.
+  -- numeric(10,2): maks. 99 999 999,99. CHECK (amount > 0) dodaje migracja
+  -- 20261029120000_transactions_amount_check.sql.
   amount      numeric(10, 2) not null,
   description text,
   date        date not null,
@@ -44,6 +47,8 @@ create table if not exists public.transactions (
 );
 
 -- Row Level Security: każdy użytkownik widzi i zmienia wyłącznie własne wiersze.
+-- Migracja 20261109120000_rls_indexes_hardening.sql zamienia poniższe polityki
+-- na wersje z `(select auth.uid())` (te same warunki, szybsze).
 -- with_check jest pusty, więc przy zapisie PostgreSQL używa warunku z USING.
 alter table public.categories   enable row level security;
 alter table public.transactions enable row level security;

@@ -4,7 +4,16 @@
 // (nie „wrzucenia minus rozbicia”), więc późniejsza edycja starych wrzuceń nie
 // psuje bieżącego stanu, a usunięcie wpisu rozbicia samo skleja dwie skarbonki.
 
-import { fromGrosze, plural, toGrosze, type Id, type Transaction } from "@/lib/budget";
+import {
+  DAY_MONTH,
+  DAY_MONTH_YEAR,
+  fromGrosze,
+  parseDateKey,
+  plural,
+  toGrosze,
+  type Id,
+  type Transaction,
+} from "@/lib/budget";
 
 export interface PiggyBank {
   amount: number;
@@ -82,19 +91,11 @@ function summarize(deposits: Transaction[]): PiggyBank {
 export const pluralDeposits = (n: number) =>
   plural(n, "wrzucenie", "wrzucenia", "wrzuceń");
 
-const dayMonth = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long" });
-const dayMonthYear = new Intl.DateTimeFormat("pl-PL", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-
 // „4 sierpnia”, a z rokiem („4 sierpnia 2025”), gdy `withYear` albo data
 // jest spoza bieżącego roku.
 export function longDate(date: string, today: string, withYear = false) {
-  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
   const sameYear = date.slice(0, 4) === today.slice(0, 4);
-  return (withYear || !sameYear ? dayMonthYear : dayMonth).format(new Date(y, m - 1, d));
+  return (withYear || !sameYear ? DAY_MONTH_YEAR : DAY_MONTH).format(parseDateKey(date));
 }
 
 // Druga linia skarbonki: „od 4 sierpnia · 3 wrzucenia”; null dla pustej.

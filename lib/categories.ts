@@ -87,6 +87,21 @@ export const reservedCategoryMessage = (target: CategoryRef) =>
     ? "Przychód „Ze skarbonki” zapisuje tylko rozbicie skarbonki w „Więcej”."
     : null;
 
+// Komunikat, gdy nazwa i typ powieliłyby istniejącą kategorię (domyślną albo
+// z bazy), bez względu na wielkość liter i spacje; null, gdy nazwa jest wolna.
+// Duplikat kategorii domyślnej byłby niewidoczny jako „własny” (`ownCategories`),
+// a zapis wybierałby jeden z dwóch wierszy. `exceptId` – edytowana kategoria.
+export function duplicateCategoryMessage(
+  categories: Category[],
+  target: CategoryRef,
+  exceptId?: Category["id"]
+): string | null {
+  const taken =
+    DEFAULT_CATEGORIES.some((d) => sameCategory(d, target)) ||
+    categories.some((c) => c.id !== exceptId && sameCategory(c, target));
+  return taken ? `Kategoria „${target.name.trim()}” już istnieje.` : null;
+}
+
 // Wyjaśnienie, czemu nie można usunąć kategorii; null, gdy nic jej nie używa.
 export function categoryUsageMessage(usage: {
   transactions: number;

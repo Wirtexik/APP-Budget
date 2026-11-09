@@ -3,6 +3,7 @@ import type { Category } from "@/lib/budget";
 import {
   buildCategoryOptions,
   categoryUsageMessage,
+  duplicateCategoryMessage,
   existingCategoryValue,
   reservedCategoryMessage,
   sameCategory,
@@ -75,5 +76,25 @@ describe("skarbonka w kategoriach", () => {
     expect(existingCategoryValue([], target)).toBeNull();
     expect(reservedCategoryMessage(target)).not.toBeNull();
     expect(reservedCategoryMessage({ name: "Ze skarbonki", type: "wydatek" })).toBeNull();
+  });
+});
+
+describe("duplicateCategoryMessage", () => {
+  const own: Category = { id: "a", name: "Kino", type: "wydatek" };
+
+  it("blokuje nazwę kategorii domyślnej tego samego typu", () => {
+    expect(duplicateCategoryMessage([], { name: " jedzenie ", type: "wydatek" })).toBe(
+      "Kategoria „jedzenie” już istnieje."
+    );
+    expect(duplicateCategoryMessage([], { name: "Jedzenie", type: "przychod" })).toBeNull();
+  });
+
+  it("blokuje nazwę istniejącej własnej kategorii", () => {
+    expect(duplicateCategoryMessage([own], { name: "KINO", type: "wydatek" })).not.toBeNull();
+    expect(duplicateCategoryMessage([own], { name: "Kino", type: "przychod" })).toBeNull();
+  });
+
+  it("przy edycji pomija samą edytowaną kategorię", () => {
+    expect(duplicateCategoryMessage([own], { name: "kino", type: "wydatek" }, "a")).toBeNull();
   });
 });
